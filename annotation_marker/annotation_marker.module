@@ -29,7 +29,7 @@ function annotation_marker_theme() {
  *
  * * annotation marker
  *     a single marker - it's definied by the position (top, left) in a certain
- *     container. The container will be identified by the #selector
+ *     container. The container will be identified by the #container selector
  *     If #input is set to true, dragging and resizing information will be
  *     written in an appended 'annotation input' element (specified above)
  * * annotation input
@@ -48,18 +48,23 @@ function annotation_marker_elements() {
     '#input' => FALSE, // may be changed to TRUE
     //'#visible' => TRUE,
     //'#hideable' => TRUE,
-    '#position' => array('0px', '0px'),
-    '#size' => array(0, 0),
-    '#conatiner selector' => '#annotation-container',
-    '#container size' => array(0, 0),
+
+    //'#position' => array('0px', '0px'),
+    //'#size' => array(0, 0),
+    //'#container selector' => '#annotation-container',
+    //'#container size' => array(0, 0),
+    '#default_value' => array(
+      'container selector' => '#annotation-container',
+      'posx' => '0px',
+      'posy' => '0px',
+      // 'width' => '10px',
+      // 'height' => '10px',
+      // 'container width' => '10px',
+      // 'container height' => '10px',
+    ),
     '#after_build' => array('annotation_marker_afterbuild'),
     '#element_validate' => array('annotation_marker_validate'),
     '#process' => array('annotation_marker_process'), // will only be called for #input == TRUE
-  );
-  $type['annotation_input'] = array(
-    '#input' => TRUE,
-    '#process' => array('annotation_input_process'),
-    '#element_validate' => array('annotation_input_validate'),
   );
   $type['annotation_markerset'] = array(
     '#input' => FALSE, // may be changed to TRUE
@@ -73,53 +78,48 @@ function annotation_marker_elements() {
  * Default theming function for annotation marker.
  */
 function theme_annotation_marker($element) {
-//  dpm($element);
-  // Change rel attrib to work as trigger for annotation.
-  $relvars = array($element['#selector']);
-  $relvars += (is_array($element['#position']) && count($element['#position']) == 2) ? $element['#position'] : array('0px', '0px');
-  $relvars += (is_array($element['#container_size']) && count($element['#container_size']) == 2) ? $element['#container_size'] : array(0, 0);
-  $relvars += (is_array($element['#size']) && count($element['#size']) == 2) ? $element['#size'] : array(0, 0);
+  // Get values for marker - priority on #value
+  $values = ($element['#value']) ? $element['#value'] : $element['#default_value'];
+
+  // Only allow elements with container selector
+  if (!$values['container selector']) return FALSE;
+
+  $relvars = array (
+    $values['container selector'], $values['posx'], $values['posy'],
+    $values['container width'], $values['container height'], $values['width'], $values['height'],
+  );
+
+  // Add id
+  $element['#attributes']['id'] = $element['#id'];
 
   // Draggable
   if ($element['#draggable'] == TRUE) {
-    //jquery_ui_add(array('ui.draggable'));
-    if (!isset($elements['#atributes']['class'])) {
-      $elements['#atributes']['class'] = array('draggable');
-    }
-    elseif(!is_array($elements['#atributes']['class'])) {
-      $elements['#atributes']['class'] = array($elements['#atributes']['class'], 'draggable');
-    }
-    else {
-      $elements['#atributes']['class'][] = 'draggable';
-    }
+    $element['#attributes']['class'] .= ' draggable';
   }
   // Resizable
   if ($element['#resizable'] == TRUE) {
-    //jquery_ui_add(array('ui.resizable'));
-    if (!isset($elements['#atributes']['class'])) {
-      $elements['#atributes']['class'] = array('draggable');
-    }
-    elseif(!is_array($elements['#atributes']['class'])) {
-      $elements['#atributes']['class'] = array($elements['#atributes']['class'], 'draggable');
-    }
-    else {
-      $elements['#atributes']['class'][] = 'draggable';
-    }
+    $element['#attributes']['class'] .= ' resizable';
   }
 
   $relvars = implode('|', $relvars);
-  $element['#attributes']['rel'] = "annomark[$relvars]";
+  $element['#attributes']['rel'] = "annotation-marker[$relvars]";
+  //$element['#attributes']['class'][] = "annotation-marker[$relvars]";
 
   drupal_add_css(drupal_get_path('module','annotation_marker'). '/annotation_marker.css', 'module');
   //drupal_add_js(drupal_get_path('module','annotation_marker'). '/annotation_marker.js', 'module');
-
-  return '<div'. drupal_attributes($element['#attributes']) .'>'. ($element['#title'] ? '<label>'. $element['#title'] .'</label>' : '') . (isset($element['#description']) && $element['#description'] ? '<div class="description">'. $element['#description'] .'</div>' : '') . (!empty($element['#children']) ? $element['#children'] : '') . (isset($element['#value']) ? $element['#value'] : '') ."Baum</div>\n";
+dpm($element);
+  return '<div'. drupal_attributes($element['#attributes']) .'>'. ($element['#title'] ? '<label>'. $element['#title'] .'</label>' : '') . (isset($element['#description']) && $element['#description'] ? '<div class="description">'. $element['#description'] .'</div>' : '') . (!empty($element['#children']) ? $element['#children'] : '') . "</div>\n";
 }
 
-function annotation_input_process($element) {
+
+/**
+ * Expands an inputable marker with annotation-input element.
+ */
+function annotation_marker_process($element) {
   $columns = array( 'posx', 'posy', 'height', 'width',
-                   'container selector', 'container width', 'container height'
+                    'container selector', 'container width', 'container height'
                    );
+  $element['#attributes']['class'] .= ' input';
   $element['#tree'] = TRUE;
   foreach ($columns as $key) {
     $element[$key] = array('#type' => 'hidden', '#processed' => TRUE, '#default_value' => $element['#default_value'][$key]);
@@ -127,38 +127,10 @@ function annotation_input_process($element) {
   return $element;
 }
 
-
-function theme_annotation_input($element) {
-  $class = 'form-annotation-input';
-  if (isset($element['#attributes']['class'])) {
-    $class .= ' '. $element['#attributes']['class'];
-  }
-  $element['#children'] = '<div class="'. $class .'">'. (!empty($element['#children']) ? $element['#children'] : '') .'</div>';
-  if ($element['#title'] || $element['#description']) {
-    unset($element['#id']);
-    return theme('form_element', $element, $element['#children']);
-  }
-  else {
-    return $element['#children'];
-  }
-}
-
 /**
- * TODO:!!!!!
+ * Adds necessary js files.
  */
-function annotation_marker_process($element) {
-print('process');
-  dpm($element);
-  return $element;
-
-  return $element;
-}
-
-/**
- * 
- */
-function  annotation_marker_afterbuild($element) {
-  dpm($element);
+function annotation_marker_afterbuild($element) {
   if ($element['#draggable'] == TRUE) {
     jquery_ui_add(array('ui.draggable'));
   }
@@ -170,10 +142,10 @@ function  annotation_marker_afterbuild($element) {
   return $element;
 }
 
-function annotation_markerset_process($element) {
-  return $element;
-}
-
 function annotation_marker_validate($element, &$form_state) {
 
+}
+
+function annotation_markerset_process($element) {
+  return $element;
 }
