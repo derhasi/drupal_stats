@@ -4,11 +4,24 @@ element that is annotated
 
 scopeTYPE     node
 scopeID       nid
-scopeVARS     selector|width|height
 
+ANNOTATION:
+type of annotation
+
+annoTYPE      marker
+annoVARS      selector|width|height
 
 CONTENT:
 element that is the annotation
 
 contentTYPE   user
 contentDATA   uid
+
+
+
+
+relation:
+  table   node
+  field   nid
+
+=> annotation ['scope_']

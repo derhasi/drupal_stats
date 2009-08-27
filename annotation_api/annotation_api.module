@@ -12,13 +12,94 @@
 function annotation_api_views_api() {
   return array(
     'api' => 2,
-    'path' => drupal_get_path('module', 'annotation_data') . '/views',
+    'path' => drupal_get_path('module', 'annotation_api') . '/views',
   );
 }
 
 /**
  * Collect information of existing implementations.
+ *
+ * @param $filter
+ *  filters ouput by type
+ *  either 'scope', 'content' or 'annotation'
+ * @return
+ *  array of info definitions
  */
-function annotation_api_info() {
+function annotation_api_info($filter = NULL) {
+  static $info;
+  if (!isset($info)) {
+    $info['scope'] = module_invoke_all('annotation_info','scope');
+    $info['content'] = module_invoke_all('annotation_info','content');
+    $info['annotation'] = module_invoke_all('annotation_info','annotation');
+    drupal_alter('annotation_info', $info);
+  }
+  // Reduce info to a certain type.
+  if (isset($filter)) {
+    return $info[$filter];
+  }
+  else {
+    return $info;
+  }
+}
+
+/**
+ * Implementation of hook_annotation_info().
+ */
+function annotation_api_annotation_info($type){
+  $info = array();
+  switch ($type) {
+    case 'scope':
+    case 'content':
+      $info['node'] = array(
+        'title' => t('Node'),
+        'scope' => TRUE,
+        'content' => TRUE,
+        'help' => t('Connects nodes with annotation, as scope or content.'),
+        'relation' => array(
+          'table' => 'node',
+          'field' => 'nid',
+        ),
+      );
+      break;
+    case 'annotation':
+      $info['point'] = array(
+        'annotation' => 'TRUE',
+        'title' => t('Point'),
+      );
+      break;
+  }
+  return $info;
+}
+
+/**
+ * Save an annotation
+ *
+ * @param $annotation
+ *  annotation object
+ */
+function annotation_save($annotation) {
+  if (is_array($annotation)) {
+    $annotation = (object) $annotation;
+  }
+
+  // TODO: add hook_annotationapi('validate')
+  // TODO: add hook_annotationapi('presave')
+
+  if ($annotation->is_new) {
+    $op = 'insert';
+    $ret = drupal_write_record('annotation', $annotation);
+  }
+  else {
+    $op = 'update';
+    $ret = drupal_write_record('annotation', $annotation, array('aid'));
+  }
+  // TODO: add hook_annotationapi($op)
+  return $ret;
+}
+
+/**
+ * Form for implementing in scope to annotate content.
+ */
+function annotation_form(&$form_state, $annotation) {
 
 }

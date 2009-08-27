@@ -9,7 +9,7 @@
  * Implementation of hook_install().
  */
 function annotation_api_install(){
-  drupal_install_schema('annotation_data');
+  drupal_install_schema('annotation_api');
 }
 
 /**
@@ -51,6 +51,13 @@ function annotation_api_schema() {
           'default' => '',
           'description' => 'Type of annotation',
         ),
+        'vars' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Variables for the annotation type, e.g. grid',
+        ),
         'scope_type' => array(
           'type' => 'varchar',
           'length' => 60,
@@ -63,13 +70,6 @@ function annotation_api_schema() {
           'not null' => TRUE,
           'default' => 0,
           'description' => 'ID of what is annotated.',
-        ),
-        'scope_var' => array(
-          'type' => 'varchar',
-          'length' => 255,
-          'not null' => TRUE,
-          'default' => '',
-          'description' => 'Variable for what is annotated. Shall not be serialized',
         ),
         'content_type' => array(
           'type' => 'varchar',
