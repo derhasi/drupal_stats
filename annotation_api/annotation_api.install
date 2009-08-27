@@ -1,0 +1,97 @@
+<?php
+
+/**
+ * @file
+ *   information for install, update and enable annotation_data
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function annotation_api_install(){
+  drupal_install_schema('annotation_data');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function annotation_api_uninstall(){
+  drupal_uninstall_schema('annotation_api');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function annotation_api_schema() {
+  return array(
+    'annotation' => array (
+      'fields' => array(
+        'aid' => array(
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => 'Primary Key: Unique annotation ID.',
+        ),
+        'uid' => array(
+          'description' => 'The {users}.uid that annotated this.',
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'timestamp' => array(
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Timestamp for when annotation was created.',
+        ),
+        'type' => array(
+          'type' => 'varchar',
+          'length' => 60,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Type of annotation',
+        ),
+        'scope_type' => array(
+          'type' => 'varchar',
+          'length' => 60,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Type of what is annotated.',
+        ),
+        'scope_id' => array(
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'ID of what is annotated.',
+        ),
+        'scope_var' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Variable for what is annotated. Shall not be serialized',
+        ),
+        'content_type' => array(
+          'type' => 'varchar',
+          'length' => 60,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Type of annotation content.',
+        ),
+        'content_id' => array(
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'ID of annotation content.',
+        ),
+      ),
+      'indexes' => array(
+        'scope' => array('scope_type', 'scope_id'),
+        'content' => array('content_type', 'content_id'),
+        'uid' => array('uid'),
+        'timestamp' => array('timestamp'),
+      ),
+      'primary key' => array('aid'),
+    ),
+  );
+}

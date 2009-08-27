@@ -1,0 +1,24 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   storage of annotation is managed within this module
+ */
+
+/**
+ * Implementation of hook_views_api().
+ */
+function annotation_api_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'annotation_data') . '/views',
+  );
+}
+
+/**
+ * Collect information of existing implementations.
+ */
+function annotation_api_info() {
+
+}

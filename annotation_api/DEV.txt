@@ -1,0 +1,14 @@
+
+SCOPE:
+element that is annotated
+
+scopeTYPE     node
+scopeID       nid
+scopeVARS     selector|width|height
+
+
+CONTENT:
+element that is the annotation
+
+contentTYPE   user
+contentDATA   uid

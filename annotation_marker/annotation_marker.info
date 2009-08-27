@@ -2,6 +2,7 @@
 name = Annotation Marker
 description = A module that provides an annotation marker.
 core = 6.x
-package = "Annotation"
+version = dev
+package = "Annotation dH"
 dependencies[] = jquery_update
 dependencies[] = jquery_ui
