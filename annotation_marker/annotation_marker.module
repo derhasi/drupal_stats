@@ -9,7 +9,7 @@ function annotation_marker_menu() {
       'page arguments' => array('test_annotation_marker_form'),
       'access arguments' => array('access content'),
       'file' => 'form.inc',
-    )
+    ),
   );
 }
 
@@ -20,6 +20,9 @@ function annotation_marker_theme() {
   return array(
     'annotation_marker' => array(
       'arguments' => array('element' => NULL),
+    ),
+    'annotation_toggle' => array(
+      'arguments' => array('selector', 'contents'),
     ),
   );
 }
@@ -148,4 +151,12 @@ function annotation_marker_validate($element, &$form_state) {
 
 function annotation_markerset_process($element) {
   return $element;
+}
+
+/**
+ * Item to toggle visibility of contents.
+ */
+function theme_annotation_toggle($selector, $contents = 'Toggle', $contents_toogle = 'Toggle Back') {
+  drupal_add_js(drupal_get_path('module','annotation_marker'). '/annotation_marker.js', 'module');
+  return "<span class=\"annotation-toggle\" rel=\"$selector|$contents_toogle\">$contents</span>";
 }

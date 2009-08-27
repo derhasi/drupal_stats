@@ -62,23 +62,34 @@ Drupal.behaviors.annotation_marker = function (context) {
     sub_am.addClass('resizable-processed');
   }
 
-  // Input handlich
+  // Input handling
   var sub_am = $("div.input[rel^='annotation-marker']:not(.input-processed)");
   sub_am.bind('dragstop', function(event, ui) {
     var id = "#" + $(this).attr("id");
     //alert("#" + ui.id() + '-posx');
-    $(id + '-posx').attr('value', $(this).css('left'));
-    $(id + '-posy').attr('value', $(this).css('top'));
-    $(id + '-container-width').attr('value', $(selector).width());
-    $(id + '-container-height').attr('value', $(selector).height());
+    $(id + '-posx').val($(this).css('left'));
+    $(id + '-posy').val($(this).css('top'));
+    $(id + '-container-width').val($(selector).width());
+    $(id + '-container-height').val($(selector).height());
+    $(id + '-container-selector').val(selector);
   });
   sub_am.bind('resizestop', function(event, ui) {
     var id = "#" + $(this).attr("id");
-    $(id + '-width').attr('value', $(this).css('width'));
-    $(id + '-height').attr('value', $(this).css('height'));
-    $(id + '-container-width').attr('value', $(selector).css('width'));
-    $(id + '-container-height').attr('value', $(selector).css('height'));
+    $(id + '-width').val($(this).css('width'));
+    $(id + '-height').attr($(this).css('height'));
+    $(id + '-container-width').val($(selector).css('width'));
+    $(id + '-container-height').val($(selector).css('height'));
   });
   sub_am.addClass('input-processed');
 
+  // Toggle
+  var at = $('.annotation-toggle:not(.annotation-toggle-processed)');
+  at.addClass('annotation-toggle-processed');
+  at.bind('click', function(e) {
+    var rel = $(this).attr('rel').split('|');
+    var cur = $(this).html();
+    $(rel[0]).toggle();
+    $(this).html(rel[1]).attr('rel', rel[0] + '|' + cur);
+  }
+  );
 };
