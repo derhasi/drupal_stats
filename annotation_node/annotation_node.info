@@ -1,0 +1,8 @@
+; $Id$
+name = Annotation Node
+description = A module that provides annotation of nodes to nodes. Proof of concept module at the moment, not yet dependent on annotation.module.
+core = 6.x
+package = "Annotation"
+dependencies[] = jquery_update
+dependencies[] = jquery_ui
+dependencies[] = prepopulate

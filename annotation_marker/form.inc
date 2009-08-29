@@ -21,6 +21,8 @@ function test_annotation_marker_form(&$form_state) {
     '#type' => 'submit',
     '#value' => t('submit'),
   );
+    $schema = drupal_get_schema('annotation');
+  dpm($schema);
   return $form;
 }
 

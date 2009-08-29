@@ -6,6 +6,54 @@
  *   storage of annotation is managed within this module
  */
 
+
+/**
+ * Central form for editing annotation
+ */
+function annotation_form(&$form_state, $annotation) {
+  $info = annotation_api_info();
+  $form = array();
+  $form['#annotation'] = array('#type' => 'value', '#value' => $annotation);
+  $form['type'] = array('#type' => 'value', '#value' => $annotation->type);
+  $form['scope_type'] = array('#type' => 'value', '#value' => $annotation->scope_type);
+  $form['scope_id'] = array('#type' => 'value', '#value' => $annotation->scope_id);
+
+  if ($info['content'][$annotation->content_type]['form']) {
+    $form['content'] = drupal_get_form($info['content'][$annotation->content_type]['form'], $annotation);
+  }
+
+  // VALIDATION
+  $validates = array();
+  // Content before annotation.
+  if ($info['content'][$annotation->content_type]['validate']) {
+    $validates[] = $info['content'][$annotation->content_type]['validate'];
+  }
+  // Annotation.
+  if ($info['annotation'][$annotation->type]['validate']) {
+    $validates[] = $info['annotation'][$annotation->type]['validate'];
+  }
+  $validates[] = 'annotation_form_validate';
+
+  // SUBMISSION
+  $submits = array();
+  // Content before annotation.
+  if ($info['content'][$annotation->content_type]['submit']) {
+    $submits[] = $info['content'][$annotation->content_type]['submit'];
+  }
+  // Annotation.
+  if ($info['annotation'][$annotation->type]['submit']) {
+    $submits[] = $info['annotation'][$annotation->type]['submit'];
+  }
+  $submits[] = 'annotation_form_submit';
+
+  $form['#validate'] = $validates;
+  $form['#submit'] = $submits;
+
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
+  return $form;
+}
+
+
 /**
  * Implementation of hook_views_api().
  */
@@ -52,18 +100,17 @@ function annotation_api_annotation_info($type){
     case 'content':
       $info['node'] = array(
         'title' => t('Node'),
-        'scope' => TRUE,
-        'content' => TRUE,
         'help' => t('Connects nodes with annotation, as scope or content.'),
         'relation' => array(
           'table' => 'node',
           'field' => 'nid',
         ),
+        'view' => 'node_view',
+        'load' => 'node_load',
       );
       break;
     case 'annotation':
       $info['point'] = array(
-        'annotation' => 'TRUE',
         'title' => t('Point'),
       );
       break;
@@ -98,8 +145,94 @@ function annotation_save($annotation) {
 }
 
 /**
- * Form for implementing in scope to annotate content.
+ * Load one or more annotation objects from the database.
  */
-function annotation_form(&$form_state, $annotation) {
+function annotation_load($params, $reset = FALSE) {
+  static $annotations;
+  // Load only one annotation by id
+  if (!is_array($params)) {
+    $params = array('aid' => $params);
+  }
 
+  if ($reset == TRUE || !isset($annotations[serialize($params)])) {
+    // Load only one, when aid is given
+    if (array_key_exists($params, $aid)) {
+      $single = TRUE;
+    }
+    $query = 'SELECT * FROM {annotation}';
+    $where = array();
+    $args = array();
+    $schema = drupal_get_schema('annotation');
+    $int_types = array('serial', 'int');
+    foreach ($params as $field => $val) {
+      if (isset($schema['fields'][$field])) {
+        $where[] = (in_array($schema['fields'][$field]['type'], $int_types)) ? "$field = %d" : "$field = '%s'";
+        $args[] = $val;
+      }
+    }
+    if (count($where)) {
+      $query .= ' WHERE '. implode(' AND ', $where);
+    }
+
+    if ($single) {
+      $res = db_query_range($query, $args, 0, 1);
+      $return = db_fetch_object($res);
+    }
+    else {
+      $return = array();
+      $res = db_query($query, $args);
+      while ($obj = db_fetch_object($res)) {
+        $return[$obj->aid] = $obj;
+      }
+    }
+    $annotations[serialize($params)] = $return;
+  }
+  return $annotations[serialize($params)];
+}
+
+/**
+ * Views an annotation.
+ *
+ * @param $annotation
+ *   object loaded from database, eventually enriched with additional
+ *   information.
+ * @return
+ *   string output for displaying
+ */
+function annotation_view($annotation) {
+  $infos = annotation_api_info('annotation');
+  $info = $infos[$annotation->type];
+  if ($info['view']) {
+    return $info['view']($annotation);
+  }
+  watchdog('annotation', 'Missing theme function for annotation type %type', array('%type' => $annotation->type),  WATCHDOG_ERROR, $_GET['q']);
+  return FALSE;
+}
+
+/**
+ * Views the content of an annotation.
+ *
+ * Shall be called in a annotation view function defined by an annotation module
+ * with $info['view]
+ *
+ * @annotation
+ *   annotation object loaded from database, eventually enriched with
+ *   additional information
+ * @return
+ *   string output for implementing into annotation_view functions
+ */
+function annotation_content_view($annotation) {
+  $infos = annotation_api_info('content');
+  $info = $infos[$annotation->content_type];
+  if ($info['view']) {
+    if ($info['load']) {
+      $content = $info['load']($annotation->content_id);
+    }
+    else {
+      $content = $annotation->content_id;
+    }
+    return $info['view']($content, $annotation);
+  }
+  watchdog('annotation', 'Missing view function for annotation content type %type', array('%type' => $annotation->content_type),  WATCHDOG_ERROR, $_GET['q']);
+  return FALSE;
 }

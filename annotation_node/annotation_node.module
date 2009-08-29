@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * An annotation module.
+ *
+ * @see README.txt
+ */
+
+/**
+ * Implemenatation of hook_nodeapi().
+ *
+ * Loads and views annotation for nodes.
+ */
+function annotation_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
+  if ($op == 'view' && !$teaser) {
+    if (isset($node->annotation)) {
+      foreach ($node->annotation as $annotation) {
+        $node->content['annotation'][] = array(
+          '#value' => annotation_view($annotation),
+        );
+      }
+    }
+  }
+  elseif ($op == 'load') {
+    $annotations = annotation_load(array('scope_type' => 'node', 'scope_id' => $node->nid));
+    if (count($annotations)) {
+      $node->annotation = $annotations;
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_annotation_info().
+ */
+function annotation_node_annotation_info($type) {
+  $info = array();
+  switch ($type) {
+    case 'scope':
+      $info['node'] = array(
+        'title' => t('Node'),
+        'help' => t('Provides nodes as scope for an annotation.'),
+        'relation' => array(
+          'table' => 'node',
+          'field' => 'nid',
+        ),
+      );
+      break;
+    case 'content':
+      $info['node'] = array(
+        'title' => t('Node'),
+        'help' => t('Provides nodes as content for an annotation.'),
+        'relation' => array(
+          'table' => 'node',
+          'field' => 'nid',
+        ),
+        'load' => 'node_load',
+        'view' => 'annotation_node_view',
+        'form' => 'annotation_node_form',
+      );
+      break;
+  }
+}
+
+/**
+ * View node content in annotation.
+ */
+function annotation_node_view($node, $annotation) {
+  return node_view($node, TRUE, FALSE, FALSE);
+}
+
+/**
+ * Subform for annotation form.
+ */
+function annotation_node_form(&$form_state, $annotation) {
+  return array(
+    'id' => array(
+      '#type' => 'select',
+      '#options' => _annotation_node_options(),
+      '#title' => t('Node'),
+    ),
+  );
+}
+
+
+function _annotation_node_options() {
+  $res =  db_query("SELECT nid, title FROM {node}");
+  $ops = array();
+  while ($obj = db_fetch_object($res)) {
+    $ops[$obj->nid] = $obj->title;
+  }
+  return $ops;
+}

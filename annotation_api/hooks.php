@@ -23,12 +23,18 @@ function hook_annotation_info($type) {
           'table' => 'node',
           'field' => 'nid',
         ),
+        'load' => 'node_load', // additional load function to provide an object
+        'view' => 'node_view', // ($content, $annotation)function to view content in annotation
+        // 'process' =>
+        // 'after_build' =>
+        // 'submit'
       );
       break;
     case 'annotation':
       $info['point'] = array(
         'annotation' => 'TRUE',
         'title' => t('Point'),
+        'view' => 'annotation_point',// ($annotation)
       );
       break;
   }
