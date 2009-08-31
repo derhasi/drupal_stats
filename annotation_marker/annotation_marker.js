@@ -39,13 +39,13 @@ Drupal.behaviors.annotation_marker = function (context) {
   }
 
   //am.html(x + ":" + y);
-  am.css('left', x + 'px');
-  am.css('top', y + 'px');
+  am.css('left', x);
+  am.css('top', y);
   if (w) {
-    am.css('width', w + 'px');
+    am.css('width', w);
   }
   if (h) {
-    am.css('height', h + 'px');
+    am.css('height', h);
   }
 
   // Draggable annotation marker

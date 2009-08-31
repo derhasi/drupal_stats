@@ -1,0 +1,8 @@
+; $Id$
+name = Annotation Point
+description = Implementation for Annotation API to mark content.
+core = 6.x
+version = dev
+package = "Annotation dH"
+dependencies[] = jquery_update
+dependencies[] = jquery_ui

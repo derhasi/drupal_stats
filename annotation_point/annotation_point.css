@@ -1,0 +1,20 @@
+.annotation-point {
+  background: gray;
+  width: 20px;
+  height: 20px;
+  position: relative;
+}
+
+.annotation-point-form .dragger {
+  background: green;
+  width: 20px;
+  height: 20px;
+}
+
+.annotation-point .content {
+  position: relative;
+  left: 10px;
+  top: 10px;
+  background: red;
+  width: 100px;
+}

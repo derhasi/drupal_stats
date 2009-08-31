@@ -1,34 +1,5 @@
 <?php
 
-
-/**
- * Implementation of hook_annotation_info().
- */
-function annotation_marker_annotation_info($type) {
-  $info = array();
-  switch ($type) {
-    case 'annotation':
-      $info['point'] = array(
-        'title' => t('Point'),
-        'view' => 'annotation_point',
-      );
-      break;
-  }
-  return $info;
-}
-
-function annotation_marker_menu() {
-  return array(
-    'test_annotation_marker' => array(
-      'title' => 'Text Annotation Marker',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('test_annotation_marker_form'),
-      'access arguments' => array('access content'),
-      'file' => 'form.inc',
-    ),
-  );
-}
-
 /**
  * Implementation of hook_theme().
  */
@@ -65,13 +36,6 @@ function annotation_marker_elements() {
     '#draggable' => FALSE,
     '#resizable' => FALSE,
     '#input' => FALSE, // may be changed to TRUE
-    //'#visible' => TRUE,
-    //'#hideable' => TRUE,
-
-    //'#position' => array('0px', '0px'),
-    //'#size' => array(0, 0),
-    //'#container selector' => '#annotation-container',
-    //'#container size' => array(0, 0),
     '#default_value' => array(
       'container selector' => '#annotation-container',
       'posx' => '0px',
@@ -126,7 +90,6 @@ function theme_annotation_marker($element) {
 
   drupal_add_css(drupal_get_path('module','annotation_marker'). '/annotation_marker.css', 'module');
   //drupal_add_js(drupal_get_path('module','annotation_marker'). '/annotation_marker.js', 'module');
-dpm($element);
   return '<div'. drupal_attributes($element['#attributes']) .'>'. ($element['#title'] ? '<label>'. $element['#title'] .'</label>' : '') . (isset($element['#description']) && $element['#description'] ? '<div class="description">'. $element['#description'] .'</div>' : '') . (!empty($element['#children']) ? $element['#children'] : '') . "</div>\n";
 }
 

@@ -8,19 +8,36 @@
  */
 
 /**
+ * Implementation of hook_perm().
+ */
+function annotation_node_perm() {
+  return array('add annotation to nodes', 'view annotations to nodes');
+}
+
+/**
  * Implemenatation of hook_nodeapi().
  *
  * Loads and views annotation for nodes.
  */
 function annotation_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   if ($op == 'view' && !$teaser) {
-    if (isset($node->annotation)) {
-      foreach ($node->annotation as $annotation) {
-        $node->content['annotation'][] = array(
-          '#value' => annotation_view($annotation),
-        );
+    // View existing node annotations.
+    if (user_access('view annotations to nodes')) {
+      if (isset($node->annotation)) {
+        foreach ($node->annotation as $annotation) {
+          $node->content['annotation'][] = array(
+            '#value' => annotation_view($annotation),
+          );
+        }
       }
     }
+    // Add ability to add new annotation.
+    $new = (object) array(
+      'new' => TRUE,
+      'scope_type' => 'node',
+      'scope_id' => $node->nid,
+    );
+    $node->content['annotation_add'] = annotation_api_form_default($new);
   }
   elseif ($op == 'load') {
     $annotations = annotation_load(array('scope_type' => 'node', 'scope_id' => $node->nid));
@@ -61,13 +78,16 @@ function annotation_node_annotation_info($type) {
       );
       break;
   }
+  return $info;
 }
 
 /**
  * View node content in annotation.
  */
 function annotation_node_view($node, $annotation) {
-  return node_view($node, TRUE, FALSE, FALSE);
+  return 'BAUMHAUS BAUMHAUS';
+  $ret = node_view($node, TRUE, FALSE, FALSE);
+  return $ret;
 }
 
 /**
@@ -75,11 +95,9 @@ function annotation_node_view($node, $annotation) {
  */
 function annotation_node_form(&$form_state, $annotation) {
   return array(
-    'id' => array(
-      '#type' => 'select',
-      '#options' => _annotation_node_options(),
-      '#title' => t('Node'),
-    ),
+    '#type' => 'select',
+    '#options' => _annotation_node_options(),
+    '#title' => t('Node'),
   );
 }
 
