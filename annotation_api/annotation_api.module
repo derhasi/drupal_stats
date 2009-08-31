@@ -135,7 +135,7 @@ function annotation_form_submit($form, &$form_state) {
       'content_type' => $form_state['values']['content_type'],
       'content_id' => $form_state['values']['content_id'],
     );
-    //$ret = annotation_save($annotation);
+    $ret = annotation_save($annotation);
     if ($ret) {
       drupal_set_message('Annotation succesfully set!');
     }

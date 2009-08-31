@@ -3,7 +3,8 @@
 Drupal.behaviors.annotation_point_form = function (context) {
   var af = $('.annotation-point-form:not(.annotation-point-form-processed)');
   af.addClass('annotation-point-form-processed');
-  var valfield = af.find('input.annotation-point-vars');
+  var valfield = af.find('.annotation-point-vars');
+  //alert(valfield.val());
   if (valfield.val()) {
     var specs = valfield.val().split('|');
     var selector = specs[0];
@@ -19,6 +20,8 @@ Drupal.behaviors.annotation_point_form = function (context) {
     af.css('position', 'absolute');
     af.css('top', posx);
     af.css('left', posy);
+
+    //alert(selector);
 
     //Make form draggable
     //if (jQuery.isFunction(af.draggable)) {
