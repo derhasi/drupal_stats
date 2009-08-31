@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * @file
+ * An annotation module.
+ *
+ * @see README.txt
+ */
+
+/**
+ * Implementation of hook_annotation_info().
+ */
+function annotation_user_annotation_info($type) {
+  $info = array();
+  switch ($type) {
+    case 'content':
+      $info['user'] = array(
+        'title' => t('User'),
+        'help' => t('Provides users as content for an annotation.'),
+        'relation' => array(
+          'table' => 'users',
+          'field' => 'uid',
+        ),
+        'load' => 'user_load',
+        'view' => 'annotation_user_view',
+        'form' => 'annotation_user_form',
+      );
+      break;
+  }
+  return $info;
+}
+
+/**
+ * View node content in annotation.
+ */
+function annotation_user_view($user, $annotation) {
+  return l($user->name,'user/'. $user->uid);
+}
+
+/**
+ * Subform for annotation form.
+ */
+function annotation_user_form(&$form_state, $annotation) {
+  return array(
+    '#type' => 'select',
+    '#options' => _annotation_user_options(),
+    //'#title' => t('User'),
+  );
+}
+
+
+function _annotation_user_options() {
+  $res =  db_query("SELECT uid, name FROM {users}");
+  $ops = array();
+  while ($obj = db_fetch_object($res)) {
+    $ops[$obj->uid] = $obj->name;
+  }
+  unset($ops[0]);
+  return $ops;
+}

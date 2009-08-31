@@ -5,6 +5,14 @@
   position: relative;
 }
 
+form.annotation-point-form {
+  background: darkRed;
+}
+.annotation-point-form div.inner {
+  background: yellow;
+  position: absolute;
+}
+
 .annotation-point-form .dragger {
   background: green;
   width: 20px;

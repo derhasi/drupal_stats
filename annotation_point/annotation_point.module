@@ -39,7 +39,8 @@ function annotation_point_view($annotation, $content) {
  */
 function annotation_point_form_annotation_form_alter(&$form, $form_state) {
   if ($form['#annotation']->type == 'point') {
-    $form['dragger'] = array('#value' => '<div class="dragger"></div>');
+    $form['dragger'] = array('#value' => '<div class="dragger"></div>', '#weight' => -998);
+    $form['adder'] = array('#value' => '<div class="adder" rel="'. t('Hide') .'"><a>'. t('Add') .'</a></div>', '#weight' => -998);
     $form['#attributes']['class'] .= ' annotation-point-form';
     $form['vars']['#attributes']['class'] .= ' annotation-point-vars';
     //$form['vars']['#type'] = 'textfield';

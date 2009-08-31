@@ -85,7 +85,8 @@ function annotation_node_annotation_info($type) {
  * View node content in annotation.
  */
 function annotation_node_view($node, $annotation) {
-  return 'BAUMHAUS BAUMHAUS';
+  return l($node->title,'node/'. $node->nid);
+  //return 'BAUMHAUS BAUMHAUS';
   $ret = node_view($node, TRUE, FALSE, FALSE);
   return $ret;
 }
