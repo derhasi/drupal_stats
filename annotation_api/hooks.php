@@ -8,17 +8,48 @@
 
 /**
  * Collect information for annotation module components.
+ *
+ * You can define three different types of plugins for annotation_api.
+ * * Annotation Type
+ *   this is the method you can assign values to a specific element, for example
+ *   the default point module, assigns values via x/y-coordinate at a specific
+ *   part (defined by selector) on the element
+ * * Scope Type
+ *   this is the type of element you assign values to, for example you can set
+ *   a mark on a node (in view mode) or a user profile
+ * * Content Type
+ *   that's the element that will be assigned to a scope, for example you can
+ *   link a user (that will be the content) on a node
+ *
+ * @param $type
+ *   type of plugin, either 'annotatio', 'scope' or 'content'
+ * @return
+ *   an array of plugin definitions for the specific type
+ *
+ *   * type: annotation
+ *      - title - Human readable name for the plugin
+ *      - view - the function that is used to view the annotation
+ *      - settings_form - form function to add additional settings
+ *      - use hook_form_annotation_form_alter() to alter the input form
+ *   * type: scope
+ *      - title - Human readable name for the plugin
+ *
  */
 function hook_annotation_info($type) {
   $info = array();
   switch ($type) {
     case 'scope':
-
+      $info['node'] = array(
+        'title' => t('Node'),
+        'help' => t('Provides nodes as scope for an annotation.'),
+        'relation' => array(
+          'table' => 'node',
+          'field' => 'nid',
+        ),
+      );
     case 'content':
       $info['example'] = array(
         'title' => t('Example'),
-        'scope' => TRUE,
-        'content' => TRUE,
         'help' => t('Connects example to annotations'),
         'relation' => array(
           'table' => 'example',
@@ -31,10 +62,9 @@ function hook_annotation_info($type) {
       break;
     case 'annotation':
       $info['point'] = array(
-        'annotation' => 'TRUE',
         'title' => t('Point'),
         'view' => 'annotation_example_annotation_view',// ($annotation, $content)
-        'form_alter' => 'annotation_example_annotation_formalter', // (&$form, $annotation)is the first function to alter the default form.
+        //'form_alter' => 'annotation_example_annotation_formalter', // (&$form, $annotation)is the first function to alter the default form.
       );
       break;
   }

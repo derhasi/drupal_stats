@@ -7,6 +7,7 @@
  * @see README.txt
  */
 
+
 /**
  * Implementation of hook_annotation_info().
  */
@@ -48,7 +49,9 @@ function annotation_user_form(&$form_state, $annotation) {
   );
 }
 
-
+/**
+ * Builds the options array for user selection.
+ */
 function _annotation_user_options() {
   $res =  db_query("SELECT uid, name FROM {users}");
   $ops = array();
