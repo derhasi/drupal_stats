@@ -75,6 +75,7 @@ function annotation_node_annotation_info($type) {
         'load' => 'node_load',
         'view' => 'annotation_node_view',
         'form' => 'annotation_node_form',
+        'settings_form' => 'annotation_node_settings_form_content',
       );
       break;
   }
@@ -110,4 +111,14 @@ function _annotation_node_options() {
     $ops[$obj->nid] = $obj->title;
   }
   return $ops;
+}
+
+function annotation_node_settings_form_content() {
+  $form = array();
+  $form['options'] = array(
+    '#type' => 'select',
+    '#title' => t('Options type'),
+    '#options' => array('_annotation_node_options' => t('Every node')),
+  );
+  return $form;
 }
