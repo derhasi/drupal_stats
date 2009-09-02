@@ -9,20 +9,20 @@
 /**
  * Collect information for annotation module components.
  *
- * You can define three different types of plugins for annotation_api.
- * * Annotation Type
+ * You can define three different types of hanlders for annotation_api.
+ * * Annotation Type (Connect handler)
  *   this is the method you can assign values to a specific element, for example
  *   the default point module, assigns values via x/y-coordinate at a specific
  *   part (defined by selector) on the element
- * * Scope Type
+ * * Scope type (scope handler)
  *   this is the type of element you assign values to, for example you can set
  *   a mark on a node (in view mode) or a user profile
- * * Content Type
+ * * Content Type (content handler)
  *   that's the element that will be assigned to a scope, for example you can
  *   link a user (that will be the content) on a node
  *
  * @param $type
- *   type of plugin, either 'annotatio', 'scope' or 'content'
+ *   type of plugin/handler, either 'annotatio', 'scope' or 'content'
  * @return
  *   an array of plugin definitions for the specific type
  *

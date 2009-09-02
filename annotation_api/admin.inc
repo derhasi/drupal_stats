@@ -85,18 +85,39 @@ function annotation_api_admin_edit_form(&$form_state, $id) {
     'scope' => array('#type' => 'value', '#value' => $set['scope']),
     'annotation' => array('#type' => 'value', '#value' => $set['annotation']),
     'content' => array('#type' => 'value', '#value' => $set['content']),
+    'title' => array('#type' => 'textfield', '#default_value' => $set['title'], '#title' => t('Title')),
   );
   $c = 0;
   $form['settings']['#tree'] = TRUE;
-  foreach (array('scope', 'annotation', 'content') as $type)
-  if ($infos[$type][$set[$type]]['settings_form']) {
-    $func = $infos[$type][$set[$type]]['settings_form'];
-    $form['settings'][$type] = $func($set['settings'][$type]);
-    $c++;
+  $validates = array();
+  $submits = array();
+  foreach (array('scope', 'annotation', 'content') as $type) {
+    if ($infos[$type][$set[$type]]['settings_form']) {
+      $func = $infos[$type][$set[$type]]['settings_form'];
+      $form['settings'][$type] = $func($set['settings'][$type]);
+      // Set title and type, if they haven't been set by the handler module.
+      if (!isset($form['settings'][$type]['#type'])) $form['settings'][$type]['#type'] = 'fieldset';
+      if (!isset($form['settings'][$type]['#title'])) $form['settings'][$type]['#title'] = t("$type : @type_title", array('@type_title' => $infos[$type][$set[$type]]['title']));
+      // Fetch validation functions defined in the handler module.
+      if (isset($form['settings'][$type]['#validate'])) {
+        $validates += $form['settings'][$type]['#validate'];
+        unset($form['settings'][$type]['#validate']);
+      }
+      // Fetch submit functions.
+      if (isset($form['settings'][$type]['#submit'])) {
+        $validates += $form['settings'][$type]['#submit'];
+        unset($form['settings'][$type]['#submit']);
+      }
+      $c++;
+    }
   }
+  $form['#validate'] = $validates;
+  $form['#submit'] = $submits;
+  // Show a message and go back button for no setting forms available.
   if (!$c) {
     $form['message'] = array('#value' => t('- No settings are necessary. -  <br/>!backlink', array('!backlink' => l(t('Back to list'),'admin/settings/annotation_api'))));
   }
+  // Else show the submit button and Cancel link.
   else {
     $form['submit'] = array('#value' => t('Submit'), '#type' => 'submit', '#submit' => array('annotation_api_admin_edit_form_submit'));
     $form['cancel'] = array('#value' => l(t('Cancel'), 'admin/settings/annotation_api'));
@@ -104,8 +125,22 @@ function annotation_api_admin_edit_form(&$form_state, $id) {
   return $form;
 }
 
+/**
+ * Submission for a specific annotation setting.
+ */
 function annotation_api_admin_edit_form_submit($form, &$form_state) {
-  dpm($form_state);
+  $set = variable_get('annotation_api', array());
+  $id = $form_state['values']['id'];
+  $set[$id] = array(
+    'scope' => $form_state['values']['scope'],
+    'content' => $form_state['values']['content'],
+    'annotation' => $form_state['values']['annotation'],
+    'title' => check_plain($form_state['values']['title']),
+    'settings' => $form_state['values']['settings'],
+  );
+  variable_set('annotation_api', $set);
+  drupal_set_message(t('Settings for annotation %id : %title have been saved.', array('%id' => $id, '%title' => check_plain($form_state['values']['title']))));
+  $form_state['redirect'] = 'admin/settings/annotation_api';
 }
 
 
