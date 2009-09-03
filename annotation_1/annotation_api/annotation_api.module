@@ -79,7 +79,8 @@ function annotation_form(&$form_state, $annotation) {
   $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
 
   // Pre form alter for annotation plugin.
-  // removed, because in can be handled via hook_form_annotation_form_alter($form, $form_state), so there is also #id tag vailable.
+  // removed, because it can be handled via hook_form_annotation_form_alter($form, $form_state), so there is also #id tag vailable.
+  // maybe it gets back?
   /**if ($annotation->settings['annotation']['form_alter']) {
     $annotation->settings['annotation']['form_alter']($form, $form_state, $annotation);
   }*/
@@ -87,37 +88,57 @@ function annotation_form(&$form_state, $annotation) {
 }
 
 /**
- * Get an annotation form with default values.
+ * Check if the setting fits to the current call.
+ *
+ * This function calls the fit function that can be defined in each module. This
+ * will decide if the current page view or other display is meant to work with
+ * this annotation setting.
+ *
+ * @param $set
+ *   the setting that shall be checked
+ * @return (bool)
+ *   returns TRUE, if it fits, FALSE if not so
  */
-function annotation_api_form_default(&$new) {
-  $set = variable_get('annotation_api', array());
-
-  if (is_array($new)) {
-    $new = (object) $new;
-  }
-  elseif (!is_object($new)) {
-    if ($set[$new]) {
-      $new = (object) array('type' => $new);
-    }
-    else {
+function _annotation_api_setting_fit($set){
+  $infos = annotation_api_info();
+  // Check each fit function of the setting.
+  foreach (array('scope', 'annotation', 'content') as $type) {
+    $func = $info[$type][$set[$type]];
+    if ($func && !$func($set)) {
       return FALSE;
     }
   }
+  return TRUE;
+}
 
-  $set = (!$set[$new->scope_type]) ? array() : $set[$new->scope_type];
+/**
+ * Returns all available forms to ad annotations to the current form.
+ *
+ * @params $scope_type
+ *   the tye of scope to get forms for
+ * @param $scope_id
+ *   the scope ID
+ * @return
+ *   an array of rendered forms
+ */
+function annotation_api_get_add_forms($scope_type, $scope_id) {
+  $sets = variable_get('annotation_api', array());
+  $forms = array();
+  foreach ($sets as $id => $set) {
+    if ($set['scope'] != $scope_type) continue;
+    if (!_annotation_api_setting_fit($set, $scope_id)) continue;
+    // Build default
+    $annotation = annotation_api_build_default($set, $scope);
+    $forms[$id] = drupal_get_form('annotation_form', $annotation);
+  }
+  return $forms;
+}
 
-  if (!isset($new->content_type)) {
-    if (!$set['default_content']) return FALSE;
-    $new->content_type = $set['default_content'];
-  }
-  if (!isset($new->type)) {
-    if (!$set['default_annotation']) return FALSE;
-    $new->type = $set['default_annotation'];
-  }
-  if (!isset($new->vars)) {
-    $new->vars = $set['default_vars'];
-  }
-  return array('#value' => drupal_get_form('annotation_form', $new));
+/**
+ * Get an annotation form with default values.
+ */
+function annotation_api_build_default($set, $scope) {
+  return array(1,2,3);
 }
 
 /**

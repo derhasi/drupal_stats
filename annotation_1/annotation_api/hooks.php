@@ -46,6 +46,8 @@ function hook_annotation_info($type) {
           'table' => 'node',
           'field' => 'nid',
         ),
+        'settings_form' => '_annotation_node_options',
+        'fit' => '', //Function that defines, if this scope fits to the current call or not
       );
     case 'content':
       $info['example'] = array(
@@ -58,6 +60,7 @@ function hook_annotation_info($type) {
         'load' => 'example_load',
         'view' => 'example_content_view',
         'form' => 'annotation_example_content_form', // ($annotation)provides the form element for content_id
+        'fit' => '', // function that indicates if the content may be i used in the current call.
       );
       break;
     case 'annotation':
@@ -65,6 +68,7 @@ function hook_annotation_info($type) {
         'title' => t('Point'),
         'view' => 'annotation_example_annotation_view',// ($annotation, $content)
         //'form_alter' => 'annotation_example_annotation_formalter', // (&$form, $annotation)is the first function to alter the default form.
+        'fit' => '', // callback function that indicates whether this annotation type may be used on the current context.
       );
       break;
   }

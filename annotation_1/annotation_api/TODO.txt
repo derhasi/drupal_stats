@@ -2,3 +2,9 @@ TODO
 ----
 
 1) change wording (content type, annotation, plugin) to maybe 'content handler', 'handler', 'connector'
+   has to differ from other modules, to avoid confusion, but
+
+2) Access control / visibility settings via API functionality?
+3) Adminsitration links (Add-, Edit-, Delete annotation)
+4) Build more hooks?
+5) 'setings file' info, to include for settings

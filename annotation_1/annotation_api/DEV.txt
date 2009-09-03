@@ -25,3 +25,27 @@ relation:
   field   nid
 
 => annotation ['scope_']
+
+
+
+-----
+
+Implementing annotation form:
+
+0) Settings are set in admin/settings/annotation_api
+
+1) Scope is entered
+2) Retrieve every setting that fits the scope
+  2.1)
+  api func: fit_scope
+  by (scope type) AND (scope_fit function)
+  scope_fit function can use the additional settings
+  2.2)
+  fit_annotation
+  by (annotation type) AND (annotation_fit function)
+  2.3)
+  fit_content
+  by (content type) AND (content_fit function)
+  ** fit functions may check access, concrete IDs (user, node, roles, ...), etc.
+3) Show form with default settings
+  api func: {type}_default
