@@ -94,7 +94,7 @@ function annotation_api_views_data() {
 
   );
 
-
+  //SCOPE
   $info = annotation_api_info('scope');
 
   foreach ($info as $key => $item) {
@@ -120,6 +120,34 @@ function annotation_api_views_data() {
       );
     }
   }
+
+  // CONTENT
+  $info = annotation_api_info('content');
+
+  foreach ($info as $key => $item) {
+    if (isset($item['relation'])) {
+      $data['annotation']["content_$key"] = array(
+        'real field' => 'content_id',
+        'title' => t('Content: @content', array('@content' => $item['title'])),
+        'help' => $item['help'],
+        'relationship' => array(
+          'base' => $item['relation']['table'],
+          'field' => $item['relation']['field'],
+          'relationship field' => 'content_id',
+          'extra' => array(
+            array(
+              'table' => 'annotation',
+              'field' => 'content_type',
+              'value' => $key,
+            ),
+          ),
+          'handler' => 'views_handler_relationship',
+          'label' => $item['title'],
+        ),
+      );
+    }
+  }
+
   return $data;
 }
 

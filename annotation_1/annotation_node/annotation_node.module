@@ -21,9 +21,11 @@ function annotation_node_perm() {
  */
 function annotation_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   if ($op == 'view' && !$teaser) {
+    // View mode is still TODO, with some additional configuration settings
+
     // View existing node annotations.
     // TODO: replace with API defined or module defined access control
-    if (user_access('view annotations to nodes')) {
+    /**if (user_access('view annotations to nodes')) {
       if (isset($node->annotation)) {
         foreach ($node->annotation as $annotation) {
           $node->content['annotation'][] = array(
@@ -35,13 +37,13 @@ function annotation_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
     // TODO: replace with API defined or module defined access control
     if (user_access('add annotation to nodes')) {
       // Add ability to add new annotation.
-      /**$new = (object) array(
+      $new = (object) array(
         'new' => TRUE,
         'scope_type' => 'node',
         'scope_id' => $node->nid,
       );
-      $node->content['annotation_add'] = annotation_form_default($new);*/
-    }
+      $node->content['annotation_add'] = annotation_form_default($new);
+    }*/
   }
   elseif ($op == 'load') {
     $annotations = annotation_load(array('scope_type' => 'node', 'scope_id' => $node->nid));
@@ -88,10 +90,16 @@ function annotation_node_annotation_info() {
  * View node content in annotation.
  */
 function annotation_node_view($node, $annotation) {
-  return l($node->title, 'node/'. $node->nid);
-  //return 'BAUMHAUS BAUMHAUS';
-  $ret = node_view($node, TRUE, FALSE, FALSE);
-  return $ret;
+  return theme('annotation_node', $node);
+}
+
+function annotation_node_theme() {
+  return array(
+    'annotation_node' => array(
+      'arguments' => array('node' => NULL),
+      'template' => 'annotation_node',
+    ),
+  );
 }
 
 /**

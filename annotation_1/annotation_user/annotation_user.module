@@ -32,8 +32,22 @@ function annotation_user_annotation_info() {
 /**
  * View node content in annotation.
  */
-function annotation_user_view($user, $annotation) {
+function annotation_user_view($auser, $annotation) {
+  return theme('annotation_user', $auser, $annotation);
   return l($user->name,'user/'. $user->uid);
+}
+
+function annotation_user_theme() {
+  return array(
+    'annotation_user' => array(
+      'arguments' => array('annotation_user' => NULL, 'annotation' => NULL),
+      'template' => 'annotation_user',
+    ),
+  );
+}
+
+function template_preprocess_annotation_user($vars) {
+  // here can come some preprocessing....
 }
 
 /**

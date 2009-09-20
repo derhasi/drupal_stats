@@ -131,7 +131,6 @@ function annotation_save($annotation) {
   if (is_array($annotation)) {
     $annotation = (object) $annotation;
   }
-
   // TODO: add hook_annotationapi('validate')
   // TODO: add hook_annotationapi('presave')
 
