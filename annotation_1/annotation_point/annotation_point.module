@@ -9,15 +9,15 @@
 /**
  * Implementation of hook_annotation_info().
  */
-function annotation_point_annotation_info($type) {
-  if ($type == 'annotation') {
-    return array(
+function annotation_point_annotation_info() {
+  return array(
+    'annotation' => array(
       'point' => array(
         'title' => t('Point'),
         'view' => 'annotation_point_view',
       ),
-    );
-  }
+    ),
+  );
 }
 
 

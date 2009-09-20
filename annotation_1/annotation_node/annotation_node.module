@@ -55,21 +55,20 @@ function annotation_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
 /**
  * Implementation of hook_annotation_info().
  */
-function annotation_node_annotation_info($type) {
-  $info = array();
-  switch ($type) {
-    case 'scope':
-      $info['node'] = array(
+function annotation_node_annotation_info() {
+  return array(
+    'scope' => array(
+      'node' => array(
         'title' => t('Node'),
         'help' => t('Provides nodes as scope for an annotation.'),
         'relation' => array(
           'table' => 'node',
           'field' => 'nid',
         ),
-      );
-      break;
-    case 'content':
-      $info['node'] = array(
+      ),
+    ),
+    'content' => array(
+      'node' => array(
         'title' => t('Node'),
         'help' => t('Provides nodes as content for an annotation.'),
         'relation' => array(
@@ -80,10 +79,9 @@ function annotation_node_annotation_info($type) {
         'view' => 'annotation_node_view',
         'form' => 'annotation_node_form',
         'settings_form' => 'annotation_node_settings_form_content',
-      );
-      break;
-  }
-  return $info;
+      ),
+    ),
+  );
 }
 
 /**

@@ -24,7 +24,7 @@ function annotation_api_uninstall(){
  */
 function annotation_api_schema() {
   return array(
-    'annotation' => array (
+    'annotation' => array(
       'fields' => array(
         'aid' => array(
           'type' => 'serial',

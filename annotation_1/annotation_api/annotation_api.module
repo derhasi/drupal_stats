@@ -1,55 +1,17 @@
 <?php
 // $Id$
 
-//require_once 'element.inc';
-
 /**
  * @file
  *   storage of annotation is managed within this module
  */
 
 /**
- * Implementation of hook_perm().
- */
-function annotation_api_perm() {
-  return array('administer annotations');
-}
-
-/**
- * Implementation of hook_menu().
- */
-function annotation_api_menu() {
-  $items = array(
-    'admin/settings/annotation_api' => array(
-      'title' => 'Annotation API Settings',
-      'description' => 'Settings for annotation api',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('annotation_api_admin_form'),
-      'access arguments' => array('administer annotations'),
-      'file' => 'admin.inc',
-    ),
-    'admin/settings/annotation_api/%/edit' => array(
-      'title' => 'Edit Annotation Setting',
-      'page arguments' => array('annotation_api_admin_edit_form', 3),
-      'access arguments' => array('administer annotations'),
-    ),
-    'admin/settings/annotation_api/%/delete' => array(
-      'title' => 'Delete Annotation Setting',
-      //'page callback' => 'drupal_get_form',
-      'page arguments' => array('annotation_api_admin_delete_form', 3),
-      'access arguments' => array('administer annotations'),
-    ),
-  );
-  return $items;
-}
-
-
-/**
  * Central form for editing annotation
  */
 function annotation_form(&$form_state, $annotation) {
   $form = array();
-   if (isset($form_state['annotation'])) {
+  if (isset($form_state['annotation'])) {
     $annotation = $form_state['annotation'] + (array)$annotation;
   }
   $annotation = (object) $annotation;
@@ -85,60 +47,6 @@ function annotation_form(&$form_state, $annotation) {
     $annotation->settings['annotation']['form_alter']($form, $form_state, $annotation);
   }*/
   return $form;
-}
-
-/**
- * Check if the setting fits to the current call.
- *
- * This function calls the fit function that can be defined in each module. This
- * will decide if the current page view or other display is meant to work with
- * this annotation setting.
- *
- * @param $set
- *   the setting that shall be checked
- * @return (bool)
- *   returns TRUE, if it fits, FALSE if not so
- */
-function _annotation_api_setting_fit($set){
-  $infos = annotation_api_info();
-  // Check each fit function of the setting.
-  foreach (array('scope', 'annotation', 'content') as $type) {
-    $func = $info[$type][$set[$type]];
-    if ($func && !$func($set)) {
-      return FALSE;
-    }
-  }
-  return TRUE;
-}
-
-/**
- * Returns all available forms to ad annotations to the current form.
- *
- * @params $scope_type
- *   the tye of scope to get forms for
- * @param $scope_id
- *   the scope ID
- * @return
- *   an array of rendered forms
- */
-function annotation_api_get_add_forms($scope_type, $scope_id) {
-  $sets = variable_get('annotation_api', array());
-  $forms = array();
-  foreach ($sets as $id => $set) {
-    if ($set['scope'] != $scope_type) continue;
-    if (!_annotation_api_setting_fit($set, $scope_id)) continue;
-    // Build default
-    $annotation = annotation_api_build_default($set, $scope);
-    $forms[$id] = drupal_get_form('annotation_form', $annotation);
-  }
-  return $forms;
-}
-
-/**
- * Get an annotation form with default values.
- */
-function annotation_api_build_default($set, $scope) {
-  return array(1,2,3);
 }
 
 /**
@@ -192,16 +100,20 @@ function annotation_api_views_api() {
  * @return
  *  array of info definitions
  */
-function annotation_api_info($filter = NULL) {
+function annotation_api_info($filter = NULL, $id = NULL, $key = NULL) {
   static $info;
   if (!isset($info)) {
-    $info['scope'] = module_invoke_all('annotation_info','scope');
-    $info['content'] = module_invoke_all('annotation_info','content');
-    $info['annotation'] = module_invoke_all('annotation_info','annotation');
+    $info = module_invoke_all('annotation_info');
     drupal_alter('annotation_info', $info);
   }
   // Reduce info to a certain type.
-  if (isset($filter)) {
+  if (isset($filter) && isset($id) && isset($key)) {
+    return $info[$filter][$id][$key];
+  }
+  elseif (isset($filter) && isset($id)) {
+    return $info[$filter][$id];
+  }
+  elseif (isset($filter)) {
     return $info[$filter];
   }
   else {
@@ -283,7 +195,7 @@ function annotation_load($params, $reset = FALSE) {
 }
 
 /**
- * Views an annotation.
+ * Views a single existing annotation.
  *
  * @param $annotation
  *   object loaded from database, eventually enriched with additional

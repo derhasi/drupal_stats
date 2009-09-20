@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * @file
+ *   Installation functions for annotation cck.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function annotation_cck_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'annotation_cck');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function annotation_cck_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'annotation_cck');
+}
+
+/**
+ * Implementation of hook_enable().
+ *
+ * Notify content module when this module is enabled.
+ */
+function annotation_cck_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'annotation_cck');
+}
+
+/**
+ * Implementation of hook_disable().
+ *
+ * Notify content module when this module is disabled.
+ */
+function annotation_cck_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'annotation_cck');
+}

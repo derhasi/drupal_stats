@@ -1,0 +1,161 @@
+<?php
+
+/**
+ * @file
+ *  Defines a cck field for annotation
+ */
+
+/**
+ * Implemenation of hook_field_info().
+ */
+function annotation_cck_field_info() {
+  return array(
+    'annotation_cck' => array(
+      'label' => t('Annotation CCK'),
+      'description' => t('Store text data in the database.'),
+      'content_icon' => 'icon_content_text.png',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_field_settings().
+ */
+function annotation_cck_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      return array();
+      // This will go to widget
+      $form = array();
+      $form['container_selector'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Container selector'),
+        '#default_value' => $field['container_selector'],
+        '#required' => TRUE,
+        '#description' => t('The selector for the container the marker shall be used in.'),
+      );
+      $form['container_specify'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Specify container on marking.'),
+        '#collapsible' => TRUE,
+        '#disabled' => TRUE,
+        '#description' => 'TODO:'. t('A container could be specified by more parent entries, to assure a correct identification.'),
+      );
+      $form['container_specify']['mode'] = array(
+        '#disabled' => TRUE,
+        '#type' => 'radios',
+        '#title' => t('Mode'),
+        '#default_value' => $field['container_specify']['mode'],
+        '#options' => array( '' => t('Off'), 'inc' => t('include'), 'exc' => t('exclude')),
+      );
+      $form['container_specify']['values'] = array(
+        '#disabled' => TRUE,
+        '#type' => 'textarea',
+        '#title' => t('Include/exclude'),
+        '#default_value' => $field['container_specify']['values'],
+        '#description' => t('JQuery selectors that shall be in- or excluded (defined above) for automated container specification. Add multiple values by using multiple lines, one for each value.'),
+      );
+      return $form;
+    case 'save':
+      return array();
+      // This will go to widget.
+      //return array('container_selector', 'container_specify');
+    case 'database columns':
+      $columns['posx']              = array('type' => 'int', 'unsigned' => FALSE, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['posy']              = array('type' => 'int', 'unsigned' => FALSE, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['width']             = array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['height']            = array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['container']         = array('type' => 'varchar', 'length' => 255, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['container_width']   = array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE);
+      $columns['container_height']  = array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE);
+      $columns['source']            = array('type' => 'varchar', 'length' => 255, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE);
+      $columns['attributes']        = array('type' => 'text', 'serialize' => TRUE);
+      return $columns;
+    // TODO:
+    case 'views data':
+      // Start with the $data created by CCK
+      // and alter it as needed. The following
+      // code illustrates how you would retrieve
+      // the necessary data.
+      $data = content_views_field_views_data($field);
+      $db_info = content_database_info($field);
+      $table_alias = content_views_tablename($field);
+      $field_data = $data[$table_alias][$field['field_name'] .'_posx'];
+      // Make changes to $data as needed here.
+      return $data;
+  }
+}
+
+/**
+ * Implementation of hook_field().
+ */
+function annotation_cck_field($op, &$node, $field, &$items, $teaser, $page) {
+  switch ($op) {
+    //Validation on only field values.
+    case 'validate':
+      if (is_array($items)) {
+        foreach ($items as $delta => $item) {
+          // The error_element is needed so that CCK can 
+          // set an error on the right sub-element when 
+          // fields are deeply nested in the form.
+          $error_element = isset($item['_error_element']) ? $item['_error_element'] : '';
+          if (is_array($item) && isset($item['_error_element'])) unset($item['_error_element']);
+          if (!empty($item['value'])) {
+            if (!empty($field['max_length']) && drupal_strlen($item['value']) > $field['max_length']) {
+              form_set_error($error_element, t('%name: the value may not be longer than %max characters.', array('%name' => $field['widget']['label'], '%max' => $field['max_length'])));
+            }
+          }
+        }
+      }
+      return $items;
+    //Sanitize for safe output.
+    case 'sanitize':
+      foreach ($items as $delta => $item) {
+        $example = check_plain($item['container']);
+        $items[$delta]['safe'] = $example;
+      }
+  }
+}
+
+/**
+ * Implementation of hook_content_tis_empty().
+ */
+function annotation_ckk_content_is_empty($item, $field) {
+  if (empty($item['source']) || empty($item['container']) || empty($item['container_width']) || empty($item['container_height'])) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * WIDGET
+ */
+ 
+/**
+ * Implementation of hook_widget_info().
+ */
+function annotation_cck_widget_info() {
+  return array(
+    // The machine name of the widget, no more than 32 
+    // characters.
+    'annotation_cck_widget_hidden' => array(
+      'label' => t('Hidden widget'),
+      'field types' => array('annotation_cck'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array(
+        'default value' => CONTENT_CALLBACK_DEFAULT,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function annotation_cck_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+	module_load_include('inc', 'annotation_cck', 'widgets');
+  $widget_type_function = '_'.$field['widget']['type'];
+  return $widget_type_function(&$form, &$form_state, $field, $items, $delta = 0);
+}
+
+

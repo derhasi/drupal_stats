@@ -1,0 +1,14 @@
+<?php
+/**
+ * Implementation of hook_uninstall().
+ * delete block settings
+ */
+/*function cck_gmapaddress_uninstall() { 
+  db_query("DELETE FROM {blocks} WHERE module = 'cck_gmapaddress'");
+  db_query("DELETE FROM {variable} WHERE name LIKE 'cck_gmapaddress_%'");  
+}
+*/
+function cck_gmapaddress_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('cck_gmapaddress');
+}

@@ -1,0 +1,1234 @@
+<?php
+
+/**
+ * Implementation of hook_field_info().
+ */
+function cck_gmapaddress_field_info() {
+    //print '<bR>1';
+  return array(
+    'cck_gmapaddress' => array('label' => t('Google Map Address'),
+    'description' => t('Store a title, href, and attributes in the database to assemble a link.'),
+    ),
+  );
+}
+
+/**
+ * Implementation of cck hook_field_settings
+ */
+function cck_gmapaddress_field_settings($op, $field) {
+  //print '<bR>2';
+  //print $op;
+  switch ($op) {
+    case 'form':
+        //print '<bR>2_1';
+      $form = array();
+      $form['tld'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Top Level Domain'),
+            '#description' => t("The Domain of the Google Map to use for validation. (com,de,...)"),
+            '#default_value' => ($field['tld'])?$field['tld']:'com',
+            '#required'=>TRUE,
+          );
+      $form['accuracy'] = array(
+            '#type' => 'select',
+            '#title' => t('Minimum Accuracy'),
+            '#description' => t("The accuracy of gmap validation."),
+            '#default_value' => $field['accuracy'],
+            '#options'=> _cck_gmapaddress_accuracy(),
+        );
+        $form['display'] = array(
+            '#tree' => true,
+        );
+      //GMAP SIMPLE
+      $form['gmap_simple'] = array(    '#type'=>'fieldset',
+                                    '#title'=>t('GMap - Single'),
+                                    '#tree'=>TRUE,
+                                    '#collapsible'=>TRUE,
+                                    '#collapsed'=>TRUE,
+                                    '#description'=> '',
+                                    );
+      $form['gmap_simple']['width'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Width'),
+                                            '#default_value' =>$field['gmap_simple']['width'],
+                                            '#description' => '"" = default gmap setting, prepend v=,t=, f= or b= with  for views,teaser, full or block view settings, separate with ; <br/> example "600;v=200;t=300"',
+                                            );
+      $form['gmap_simple']['height'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Height'),
+                                            '#default_value' =>$field['gmap_simple']['height'],
+                                            '#description' => '"" = default gmap setting, prepend v=,t=, f= or b= with  for views,teaser, full or block view settings, separate with ; <br/> example "600;v=200;t=300"',
+                                            );
+      $form['gmap_simple']['zoom'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Zoom'),
+                                            '#default_value' =>$field['gmap_simple']['zoom'],
+                                            '#description' => '"" = default gmap setting, "auto" = Autozoom, integer (1,2,3...) for custom zoom',
+                                            );
+      $form['gmap_simple']['controltype'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Default control type'),
+                                            '#default_value' =>$field['gmap_simple']['controltype'],
+                                            '#description' => '"" = default gmap setting, "0" = none, "s" = Small, "l" = Large <br/> contains view-control like width',
+                                            );
+      $form['gmap_simple']['mtc'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Map Type Control'),
+                                            '#default_value' =>$field['gmap_simple']['mtc'],
+                                            '#description' => '"" = default gmap setting, "0" = none, "1" = Standard, "2" = Hierarchical, "3" = Dropdown <br/> contains view-control like width',//none,standard,hier,menu
+                                            );
+      $form['gmap_simple']['address'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Show address'),
+                                            '#default_value' =>$field['gmap_simple']['address'],
+                                            '#description' => '1 for show address, prepend v=,t= or f= with  for views,teaser or full view settings, separate with ; <br/> example "1;v=0;t=0',
+                                            );
+      $form['gmap_simple']['routelink'] = array('#type'=> 'select',
+                                            '#title' => t('Link to route'),
+                                            '#multiple'=>TRUE,
+                                            '#required'=>FALSE,
+                                            '#default_value' => $field['gmap_simple']['routelink'],
+                                            '#options'=>array('full'=>t('Full'),'teaser'=>t('Teaser'),'views'=>t('Views'),'block'=>t('Block')),
+                                            );
+
+      //GMAP ALL
+      $form['gmap_all'] = array(    '#type'=>'fieldset',
+                                    '#title'=>t('GMap - All addresses in one'),
+                                    '#tree'=>TRUE,
+                                    '#collapsible'=>TRUE,
+                                    '#collapsed'=>TRUE,
+                                    '#description'=> '',
+                                    );
+      $form['gmap_all']['width'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Width'),
+                                            '#default_value' =>$field['gmap_all']['width'],
+                                            '#description' => '"" = default gmap setting, prepend v=,t=, f= or b= with  for views,teaser, full or block view settings, separate with ; <br/> example "600;v=200;t=300"',
+                                            );
+      $form['gmap_all']['height'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Height'),
+                                            '#default_value' =>$field['gmap_all']['height'],
+                                            '#description' => '"" = default gmap setting, prepend v=,t=, f= or b= with  for views,teaser, full or block view settings, separate with ; <br/> example "600;v=200;t=300"',
+                                            );
+      $form['gmap_all']['zoom'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Zoom'),
+                                            '#default_value' =>$field['gmap_all']['zoom'],
+                                            '#description' => '"" = default gmap setting, "auto" = Autozoom, integer (1,2,3...) for custom zoom',
+                                            );
+      $form['gmap_all']['controltype'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Default control type'),
+                                            '#default_value' =>$field['gmap_all']['controltype'],
+                                            '#description' => '"" = default gmap setting, "0" = none, "s" = Small, "l" = Large <br/> contains view-control like width',
+                                            );
+      $form['gmap_all']['mtc'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Map Type Control'),
+                                            '#default_value' =>$field['gmap_all']['mtc'],
+                                            '#description' => '"" = default gmap setting, 0 = none, 1 = Standard, 2 = Hierarchical, 3 = Dropdown',//none,standard,hier,menu
+                                            );
+      $form['gmap_all']['address'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Show address'),
+                                            '#default_value' =>$field['gmap_all']['address'],
+                                            '#description' => '1 for show address, prepend v=,t= or f= with  for views,teaser or full view settings, separate with ; <br/> example "1;v=0;t=0',
+                                            );
+      $form['gmap_all']['routelink'] = array('#type'=> 'select',
+                                            '#title' => t('Link to route'),
+                                            '#multiple'=>TRUE,
+                                            '#required'=>FALSE,
+                                            '#default_value' => $field['gmap_all']['routelink'],
+                                            '#options'=>array('full'=>t('Full'),'teaser'=>t('Teaser'),'views'=>t('Views'),'block'=>t('Block')),
+                                            );
+      //ROUTE SINGLE
+      $form['route_single'] = array(    '#type'=>'fieldset',
+                                    '#title'=>t('Route Link - Single'),
+                                    '#tree'=>TRUE,
+                                    '#collapsible'=>TRUE,
+                                    '#collapsed'=>TRUE,
+                                    '#description'=> '',
+                                    );
+      $form['route_single']['text'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Route text'),
+                                            '#default_value' =>$field['route_single']['text'],
+                                            );
+      $form['route_single']['start'] = array('#type'=> 'select',
+                                            '#title' => t('Start address'),
+                                            '#multiple'=>FALSE,
+                                            '#default_value' =>$field['route_single']['start'],
+                                            '#options'=>_cck_gmapaddress_routestartend(0),
+                                            );
+      $form['route_single']['start_opt'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Start options'),
+                                            '#default_value' =>$field['route_single']['start_opt'],
+                                            '#description' => 'some concrete value for "Fix Address" ("Smithstreet 12, Mycity") or some fields of $user for "User field" (can be sparated by comma and spaces, e.g. "profile_street, profile_city"',
+                                            );
+      $form['route_single']['end'] = array('#type'=> 'select',
+                                            '#title' => t('Destination address'),
+                                            '#multiple'=>FALSE,
+                                            '#default_value' =>$field['route_single']['end'],
+                                            '#options'=>_cck_gmapaddress_routestartend(1),
+                                            );
+      $form['route_single']['end_opt'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Destination options'),
+                                            '#default_value' =>$field['route_single']['end_opt'],
+                                            '#description' => 'some concrete value for "Fix Address" ("Smithstreet 12, Mycity") or some fields of $user for "User field" (can be sparated by comma and spaces, e.g. "profile_street, profile_city"',
+                                            );
+      //ROUTE ALL
+      $form['route_all'] = array(    '#type'=>'fieldset',
+                                    '#title'=>t('Route Link - All addresses in one'),
+                                    '#tree'=>TRUE,
+                                    '#collapsible'=>TRUE,
+                                    '#collapsed'=>TRUE,
+                                    '#description'=> '',
+                                    );
+      $form['route_all']['text'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Route text'),
+                                            '#default_value' =>$field['route_all']['text'],
+                                            );
+      $form['route_all']['start'] = array('#type'=> 'select',
+                                            '#title' => t('Start address'),
+                                            '#multiple'=>FALSE,
+                                            '#default_value' =>$field['route_all']['start'],
+                                            '#options'=>_cck_gmapaddress_routestartend(0),
+                                            );
+      $form['route_all']['start_opt'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Start options'),
+                                            '#default_value' =>$field['route_all']['start_opt'],
+                                            '#description' => 'some concrete value for "Fix Address" ("Smithstreet 12, Mycity") or some fields of $user for "User field" (can be sparated by comma and spaces, e.g. "profile_street, profile_city"',
+                                            );
+      $form['route_all']['end'] = array('#type'=> 'select',
+                                            '#title' => t('Destination address'),
+                                            '#multiple'=>FALSE,
+                                            '#default_value' =>$field['route_all']['end'],
+                                            '#options'=>_cck_gmapaddress_routestartend(1),
+                                            );
+      $form['route_all']['end_opt'] = array(    '#type'=> 'textfield',
+                                            '#title' => t('Destination options'),
+                                            '#default_value' =>$field['route_all']['end_opt'],
+                                            '#description' => 'some concrete value for "Fix Address" ("Smithstreet 12, Mycity") or some fields of $user for "User field" (can be sparated by comma and spaces, e.g. "profile_street, profile_city"',
+                                            );
+
+      return $form;
+    case 'validate':
+    //print '<bR>2_2';
+      break;
+    case 'save':
+    //print '<bR>2_3';
+      return array('tld','accuracy','gmap_all','gmap_simple','route_single','route_all');
+    case 'database columns':
+    //print '<bR>2_4';
+      $columns = array();
+      $columns = array(
+            'longitude' => array('type' => 'float', 'length' => '18,15', 'unsigned' => FALSE, 'not null' => FALSE, 'default' => 0),
+            'latitude' => array('type' => 'float', 'length' => '18,15', 'unsigned' => FALSE, 'not null' => FALSE, 'default' => 0),
+            'accuracy' => array('type' => 'int', 'length' => 1, 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
+            'address' => array('type' => 'varchar', 'length' => 255,'not null' => FALSE, 'default' => "''"),
+            'delta' => array('type' => 'int', 'length' => 1, 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
+        );
+      return $columns;
+    case 'filters':
+//print '<bR>2_5';
+      return array(
+        'default' => array(
+          'name' => t('Default'),
+          'operator' => 'views_handler_operator_gtlt',
+        ),
+      );
+    /**case 'arguments':
+      return FALSE;**/
+    case 'callbacks':
+    //print '<bR>2_6';
+      return array(
+        'view' => CONTENT_CALLBACK_NONE,
+      );
+  }
+}
+
+function cck_gmapaddress_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'view':
+      switch($node->type)
+      {
+        case 'artists':
+        case 'bars_clubs':
+        case 'djs_vjs':
+        case 'event':
+        case 'magazines':
+        case 'producers':
+        case 'promoters':
+        case 'radio_stations':
+        case 'recording_labels':
+        case 'studios':
+        case 'gmaptest':
+            $node = node_prepare($node, $teaser);
+            $node->content['myfield'] = array(
+              '#value' => $_SESSION['gmapfield'],
+              '#weight' => 1,
+            );
+            return $node;
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of cck hook_field'
+ */
+function cck_gmapaddress_field($op, &$node, $field, &$node_field, $teaser, $page) {
+    //print '<bR>3';
+  switch ($op) {
+    case 'load':
+        //print '<bR>3_1';
+      break;
+    case 'sanitize':
+        //print '<bR>3_3';
+    _gmap_doheader();
+    $_SESSION['gmapfield'] = cck_gmapaddress_field_formatter($field, $node_field, 'gmap_simple', $node, TRUE);
+      break;
+    case 'validate':
+        //print '<bR>3_5';
+      break;
+    case 'presave':
+        //print '<bR>3_6';
+        if($node->field_street[0]['value'] != '') $node_field[0]['address'] = $node->field_street[0]['value'];
+        if($node->field_city[0]['value'] != '' && $node_field[0]['address'] != '')
+            $node_field[0]['address'] .= ' , ' . $node->field_city[0]['value'];
+        else
+            $node_field[0]['address'] = $node->field_city[0]['value'] ;
+        if($node->field_state[0]['value'] != '' && $node_field[0]['address'] != '')
+            $node_field[0]['address'] .= ' , ' . $node->field_state[0]['value'] ;
+        else
+            $node_field[0]['address'] = $node->field_state[0]['value'] ;
+        if ($node->field_country[0]['value'] != '' && $node_field[0]['address'] != '')
+            $node_field[0]['address'] .= ' , ' . $node->field_country[0]['value'];
+        else
+            $node_field[0]['address'] = $node->field_country[0]['value'];
+
+        foreach ($node_field as $key => $item){
+            if ($item['address']){
+                $gc = gmap_geocode($item['address'],$field['tld']);
+                                $node_field[$key] = array_merge($item,$gc);
+
+            } else {
+              unset($node_field[$key]);
+            }
+          }
+
+          $node_field = array_values($node_field);
+      break;
+  }
+}
+
+/**
+ * Implementation of cck hook_widget_info
+ */
+function cck_gmapaddress_widget_info() {
+    //print '<bR>5';
+  return array(
+    'gmapaddress_textfield' => array(
+      'label' => t('GMap Address - Text Field'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array('default value' => CONTENT_CALLBACK_CUSTOM),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_elements().
+ */
+function cck_gmapaddress_elements() {
+    //print '<bR>6';
+  $elements = array();
+  $elements['cck_gmapaddress'] =  array(
+    '#input' => TRUE,
+    '#columns' => array('value'), '#delta' => 0,
+    '#delta' => 0,
+    '#process' => array('gmapaddress_process'),
+  );
+  return $elements;
+}
+
+/**
+ * Implementation of cck hook_widget_settings()
+ */
+function cck_gmapaddress_widget_settings($op, $widget){
+    //print '<bR>7';
+    // $ops save,callbacks,validate get $field instead of $widget
+    switch ($op) {
+        case 'form':
+    //print '<bR>7_1';
+          $form = array();
+          return $form;
+        case 'validate':
+    //print '<bR>7_2';
+          break;
+        case 'callbacks':
+    //print '<bR>7_3';
+          return array(
+            'default value' => CONTENT_CALLBACK_NONE,
+          );
+        case 'save':
+    //print '<bR>7_4';
+          return array();
+    }
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function cck_gmapaddress_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+    //print '<bR>9';
+    //$form = array();
+      $form[$field['field_name']] = array('#tree' => TRUE,
+                                          '#type' => 'fieldset',
+                                          '#title'=>t($field['widget']['label']),
+                                          '#description' => t($field['widget']['description']),
+                                          );
+      $key = -1;
+      foreach ($items as $key => $item){
+        if ($field['#multiple'] || $key == 0){
+            $form[$field['field_name']][$key] = array('#tree' => TRUE);
+            $form[$field['field_name']][$key]['address'] = array(
+                '#type' => 'hidden',
+                '#default_value' => $item['address'],
+                '#required' => ($field['required'] && $key == 0),
+            );
+        }
+      }
+      $key++;
+      //Add empty field for multiple addresses
+      for ($i = $key;$i < 1 - $key + (($field['#multiple'])?3:0);$i++){
+        $form[$field['field_name']][$i] = array('#tree' => TRUE);
+        $form[$field['field_name']][$i]['address'] = array(
+            '#type' => 'hidden',
+            '#default_value' => $item['address'],
+            '#required' => ($field['required'] && $i == 0),
+        );
+      }
+      return $form;
+}
+
+function _cck_gmapaddress_load(&$item, $delta = 0) {
+    //print '<bR>10';
+  // Unserialize the attributes array.
+  $item['attributes'] = unserialize($item['attributes']);
+}
+
+function _cck_gmapaddress_process(&$item, $delta = 0, $field, $node) {
+    //print '<bR>11';
+    foreach ($field as $key => $item){
+        if ($item['address']){
+            $gc = gmap_geocode($item['address'],$field['tld']);
+                            $field[$key] = array_merge($item,$gc);
+
+        } else {
+          unset($node_field[$key]);
+        }
+      }
+      $field = array_values($field);
+}
+
+/**
+ * Cleanup user-entered values for a link field according to field settings.
+ *
+ * @param $item
+ *   A single link item, usually containing url, title, and attributes.
+ * @param $delta
+ *   The delta value if this field is one of multiple fields.
+ * @param $field
+ *   The CCK field definition.
+ * @param $node
+ *   The node containing this link.
+ */
+
+/**
+ * hook_widget()
+ */
+/*
+ function cck_gmapaddress_widget($op, &$node, $field, &$node_field) {
+     //print '<bR>12';
+ switch ($op) {
+    case 'prepare form values':
+    //print '<bR>12_1';
+      break;
+
+    case 'form':
+    //print '<bR>12_2';
+      $form = array();
+      $form[$field['field_name']] = array('#tree' => TRUE,
+                                          '#type' => 'fieldset',
+                                          '#title'=>t($field['widget']['label']),
+                                          '#description' => t($field['widget']['description']),
+                                          );
+      $key = -1;
+      foreach ($node_field as $key => $item){
+        if ($field['#multiple'] || $key == 0){
+            $form[$field['field_name']][$key] = array('#tree' => TRUE);
+            $form[$field['field_name']][$key]['address'] = array(
+                '#type' => 'textfield',
+                '#default_value' => $item['address'],
+                '#required' => ($field['required'] && $key == 0),
+            );
+        }
+      }
+      $key++;
+      //Add empty field for multiple addresses
+      for ($i = $key;$i < 1 - $key + (($field['#multiple'])?3:0);$i++){
+        $form[$field['field_name']][$i] = array('#tree' => TRUE);
+        $form[$field['field_name']][$i]['address'] = array(
+                '#type' => 'textfield',
+                '#default_value' => $item['address'],
+                '#required' => ($field['required'] && $i == 0),
+        );
+      }
+
+      return $form;
+
+    case 'process form values':
+    //print '<bR>12_3';
+      foreach ($node_field as $key => $item){
+        if ($item['address']){
+            $gc = gmap_geocode($item['address'],$field['tld']);
+                            $node_field[$key] = array_merge($item,$gc);
+
+        } else {
+          unset($node_field[$key]);
+        }
+      }
+      $node_field = array_values($node_field);
+      break;
+  }
+}
+*/
+
+/**
+ * Implemantation of cck hook_field_formatter_info()
+ */
+function cck_gmapaddress_field_formatter_info() {
+    //print '<bR>13';
+  return array(
+    'address' => array(
+      'label' => t('Address'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'longitude' => array(
+      'label' => t('Longitude'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'latitude' => array(
+      'label' => t('Latidude'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'lonlat' => array(
+      'label' => t('Longitude and Latidude'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'accuracy' => array(
+      'label' => t('Accuracy'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'gmap_simple' => array(
+      'label' => t('GMap - Single'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'gmap_all' => array(//Only processed by delta = 0
+      'label' => t('GMap - All addresses in one'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'route_single' => array(//Only processed by delta = 0
+      'label' => t('Route Link - Single'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'route_all' => array(
+      'label' => t('Route Link - All addresses in one'),
+      'field types' => array('cck_gmapaddress'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    /**'gmap_route' => array(
+      'label' => t('GMap Route'),
+      'field types' => array('cck_gmapaddress'),
+    ),
+    'gmap_route_user' => array(  //Options to come: to first, to last, to every place, from user over first and others to last, $user->field mit lonlat or addresse
+      'label' => t('GMap User-Route'),
+      'field types' => array('cck_gmapaddress'),
+    ),    */
+  );
+}
+
+function cck_gmapaddress_theme() {
+  return array(
+    'cck_gmapaddress_formatter_address' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_longitude' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_latitude' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_lonlat' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_accuracy' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_gmap_simple' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_gmap_all' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_route_single' => array(
+       'arguments' => array('element' => NULL),
+    ),
+    'cck_gmapaddress_formatter_route_all' => array(
+       'arguments' => array('element' => NULL),
+    ),
+
+  );
+}
+
+
+/**
+ * Theme function for 'address' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_address($element) {
+    //print '<bR>131';
+    return check_plain($item['address']);
+}
+
+/**
+ * Theme function for 'longitude' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_longitude($element) {
+    //print '<bR>132';
+      return check_plain($item['address']);
+}
+/**
+ * Theme function for 'latitude' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_latitude($element) {
+    //print '<bR>133';
+}
+/**
+ * Theme function for 'lonlat' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_lonlat($element) {
+    //print '<bR>134';
+}
+/**
+ * Theme function for 'accuracy' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_accuracy($element) {
+    //print '<bR>135';
+}
+/**
+ * Theme function for 'gmap_simple' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_gmap_simple($element) {
+    //print '<bR>136';
+}
+/**
+ * Theme function for 'gmap_all' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_gmap_all($element) {
+    //print '<bR>137';
+}
+/**
+ * Theme function for 'route_single' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_route_single($element) {
+    //print '<bR>138';
+}
+/**
+ * Theme function for 'route_all' text field formatter.
+ */
+function theme_cck_gmapaddress_formatter_route_all($element) {
+    //print '<bR>139';
+}
+
+
+/**
+ * hook_field_formatter()
+ */
+function cck_gmapaddress_field_formatter($field, $item, $formatter, $node,$block = FALSE) {
+    //print '<bR>14';
+  //get view-type
+  if ($block){
+    $view = 'block';
+  } elseif(isset($node->node_type)){
+    $view = 'views';
+  } elseif (strlen($node->teaser) > strlen($node->body)){
+    $view = 'teaser';
+  } else {
+    $view = 'full';
+  }
+  switch ($formatter) {
+    case 'address':
+    //print '<bR>14_1';
+      return check_plain($item[0]['address']);
+    case 'longitude':
+    //print '<bR>14_2';
+      return check_plain($item[0]['longitude']);
+    case 'latitude':
+    //print '<bR>14_3';
+      return check_plain($item[0]['latitude']);
+     case 'lonlat':  // format like N 15° 35.87' W 12° 01.32'
+    //      return t('lon: %lon - lat: %lat',array('%lon'=>$item[0]['longitude'],'%lat'=>$item[0]['latitude']));
+    //print '<bR>14_4';
+        $lon = $item[0]['longitude'];  $lat = $item[0]['latitude'];
+        if ($lon < 0) { $lon = -$lon; $lonc = 'W';} else $lonc = 'E';
+        $lond = floor($lon);  $lonm = ($lon - $lond)*60;
+        if ($lat < 0) { $lat = -$lat; $latc = 'S';} else $latc = 'N';
+        $latd = floor($lat); $latm = ($lat - $latd)*60;
+        return t("$latc @latd&deg; @latm' $lonc @lond&deg; @lonm'",array('%latd' => $latd, '@latm' => sprintf("%6.3f",$latm),'@lond'=>$lond,'@lonm' => sprintf("%6.3f",$lonm))); //direct input of $latc and $lonc allows them to be translated within the string, so there are 4 locale strings for translation
+    case 'accuracy':
+    //print '<bR>14_5';
+      if (!($item[0]['longitude']*1) && !($item[0]['latitude']*1)){return ;}
+      return _cck_gmapaddress_accuracy($item[0]['accuracy']);
+    case 'gmap_simple':
+    //print '<bR>14_6';
+      if (!($item[0]['longitude']*1) && !($item[0]['latitude']*1)){return ;}
+      //this view is processed for every delta
+      if ($item[0]['longitude'] && $item[0]['latitude']){
+        //Height & Width
+        $height = (strlen($field['gmap_simple']['height'])>0)?_cck_gmapaddress_addpx(_cck_gmapaddress_arrhelper($field['gmap_simple']['height'],$view)):'default';
+        $width = (strlen($field['gmap_simple']['width'])>0)?_cck_gmapaddress_addpx(_cck_gmapaddress_arrhelper($field['gmap_simple']['width'],$view)):'default';
+
+        //Zoom
+        $zoom = _cck_gmapaddress_arrhelper($field['gmap_simple']['zoom'],$view);
+        $map['behavior']=array('autozoom'=>($zoom == 'auto'));
+
+        //Default Control Type
+        if (strlen($field['gmap_simple']['controltype'])>0){
+            $temp = _cck_gmapaddress_controltype(_cck_gmapaddress_arrhelper($field['gmap_simple']['controltype'],$view));
+            if ($temp != 'default' && $temp){ $map['controltype'] = $temp;}
+        }
+        //Map Type Control
+        if (strlen($field['gmap_simple']['mtc'])>0){
+            $temp = _cck_gmapaddress_mtc(_cck_gmapaddress_arrhelper($field['gmap_simple']['mtc'],$view));
+            if ($temp != 'default' && $temp){ $map['mtc'] = $temp;}
+        }
+    //print '<pre>';
+    //print_r($item);
+    //print '</pre>';
+
+        //Address
+        $address = (_cck_gmapaddress_arrhelper($field['gmap_simple']['address'],$view))?cck_gmapaddress_field_formatter($field,$item,'address',$node):'';
+
+        //Route Link
+        $link='';
+        if (in_array($view,$field['gmap_simple']['routelink'])){
+          $link = cck_gmapaddress_field_formatter($field,$item,'route_single',$node);
+        }
+
+        return $address.gmap_simple_map($item[0]['latitude'], $item[0]['longitude'],'',$item[0]['address'],$zoom,$width,$height, FALSE, $map).$link;
+      }
+    case 'gmap_all':
+    //print '<bR>14_7';
+      //to avoid multiple view fo same map, view is only processed for delta = 0
+      if ($item[0]['longitude']*1 && $item[0]['latitude']*1 && $item[0]['delta']==0){
+        if (empty($node->{$field['field_name']})){
+            $node = node_load($node->nid);
+        }
+        //Markers
+        $markers = array();
+        $mlon = array();
+        $mlat = array();
+        $addresses = array();
+        foreach ($node->{$field['field_name']} as $key=>$el){
+            if ($el['longitude']*1 || $el['latitude']*1){
+                $markers[] = array(    'longitude'=>$el['longitude'],
+                                    'latitude'=>$el['latitude'],
+                                    'text'=>$el['address'],
+                                    'offset'=>$key,
+                             );
+                $mlon[] = $el['longitude'];
+                $mlat[] = $el['latitude'];
+                $addresses[] = $el['address'];
+            }
+        }
+        if (empty($addresses)){return ;}
+        $settings = array('markers'=>$markers);
+        //Position
+        $settings['longitude'] = (min($mlon)+max($mlon))/2;
+        $settings['latitude'] = (min($mlat)+max($mlat))/2;
+        //Zoom
+        $zoom = _cck_gmapaddress_arrhelper($field['gmap_all']['zoom'],$view);
+        if ($zoom=='auto'){
+            $settings['behavior'] = array('autozoom' => TRUE);
+        } elseif ($zoom > 0 && $zoom < 20) {
+            $settings['zoom'] = $zoom;
+        }
+        //Height & Width
+        if (strlen($field['gmap_all']['height'])>0){
+            $settings['height'] = _cck_gmapaddress_addpx(_cck_gmapaddress_arrhelper($field['gmap_all']['height'],$view));
+        }
+        if (strlen($field['gmap_all']['width'])>0){
+            $settings['width'] = _cck_gmapaddress_addpx(_cck_gmapaddress_arrhelper($field['gmap_all']['width'],$view));
+        }
+        //Default Control Type
+        if (strlen($field['gmap_all']['controltype'])>0){
+            $temp = _cck_gmapaddress_controltype(_cck_gmapaddress_arrhelper($field['gmap_all']['controltype'],$view));
+            if ($temp != 'default' && $temp){ $settings['controltype'] = $temp;}
+        }
+        //Map Type Control
+        if (strlen($field['gmap_all']['mtc'])>0){
+            $temp = _cck_gmapaddress_mtc(_cck_gmapaddress_arrhelper($field['gmap_all']['mtc'],$view));
+            if ($temp != 'default' && $temp){ $settings['mtc'] = $temp;}
+        }
+
+        //Address
+        $address = (_cck_gmapaddress_arrhelper($field['gmap_all']['address'],$view))?check_plain(implode(' | ',$addresses)):'';
+
+        //Route Link
+        $link='';
+        if (in_array($view,$field['gmap_all']['routelink'])){
+          $link = cck_gmapaddress_field_formatter($field,$item,'route_all',$node);
+        }
+
+        return $address.theme_gmap(array('#settings'=>$settings)).$link;
+      } else {
+        return '';
+      }
+    case 'route_single':
+    //print '<bR>14_7';
+        if (!empty($item[0]['address'])){
+            $addresses = array($item[0]['address']);
+            _cck_gmapaddress_addroutestartend($field[$formatter]['start'],$addresses,$field[$formatter]['start_opt'],0);
+            _cck_gmapaddress_addroutestartend($field[$formatter]['end'],$addresses,$field[$formatter]['end_opt'],1);
+            return _cck_gmapaddress_routelink($addresses,$field,$field[$formatter]['text']);
+        }
+        return '';
+    case 'route_all':
+    //print '<bR>14_8';
+        //fetches all addresses from node, only in run 1/delta==0
+        if ($item[0]['address'] && $item[0]['delta']==0){
+            if (empty($node->{$field['field_name']})){
+                $node = node_load($node->nid);
+            }
+            $addresses=array();
+            foreach ($node->{$field['field_name']} as $key=>$el){
+                if ($el['address']) {$addresses[] = $el['address'];}
+            }
+            if (empty($addresses)){return ;}
+            _cck_gmapaddress_addroutestartend($field[$formatter]['start'],$addresses,$field[$formatter]['start_opt'],0);
+            _cck_gmapaddress_addroutestartend($field[$formatter]['end'],$addresses,$field[$formatter]['end_opt'],1);
+            return _cck_gmapaddress_routelink($addresses,$field,$field[$formatter]['text']);
+        }
+        return '';
+  }
+  return '';
+}
+
+
+function _cck_gmapaddress_accuracy($nr = -1){
+    //print '<bR>15';
+ $arr = array(
+                0=>t('0 Unknown location'),
+                1=>t('1 Country level accuracy'),
+                2=>t('2 Region (state, province, prefecture, etc.) level accuracy'),
+                3=>t('3 Sub-region (county, municipality, etc.) level accuracy'),
+                4=>t('4 Town (city, village) level accuracy'),
+                5=>t('5 Post code (zip code) level accuracy'),
+                6=>t('6 Street level accuracy'),
+                7=>t('7 Intersection level accuracy'),
+                8=>t('8 Address level accuracy'),
+                9=>t('9 Premise (building name, property name, shopping center, etc.) level accuracy'),
+            );
+ return ($nr >= 0 && $nr <= 10)?$arr[$nr]:$arr;
+}
+
+function _cck_gmapaddress_arrhelper($str,$view='full'){
+    //print '<bR>16';
+    $temp = explode(';',$str);
+    $arr = array(0=>'default');
+    foreach ($temp as $k=>$el){
+        $el = explode('=',$el);
+        if (strlen($el[1])==0){
+            $arr[0]=($el[0])?$el[0]:'default';
+        } else {
+            $arr[$el[0]]=($el[1])?$el[1]:'';
+        }
+    }
+    switch ($view){
+        case 'v':
+        case 'views':
+    //print '<bR>16_1';
+            return (isset($arr['v']))?$arr['v']:$arr[0];
+        case 't':
+        case 'teaser':
+    //print '<bR>16_2';
+            return (isset($arr['t']))?$arr['t']:$arr[0];
+        case 'f':
+        case 'full':
+    //print '<bR>16_3';
+            return (isset($arr['f']))?$arr['f']:$arr[0];
+        case 'b':
+        case 'block':
+    //print '<bR>16_4';
+            return (isset($arr['b']))?$arr['b']:$arr[0];
+        default:
+            return (!$arr[0])?'default':$arr[0];
+    }
+}
+
+/**
+ * Implementation of hook_content_is_empty().
+ */
+function cck_gmapaddress_content_is_empty($item, $field) {
+    //print '<bR>22';
+    //print_r($item);
+    /*
+  if (empty($item['title']) && empty($item['url'])) {
+    return TRUE;
+  }
+  */
+  return FALSE;
+}
+
+function _cck_gmapaddress_routestartend($end){
+    //print '<bR>17';
+  return array('0'=>t('!nr address',array('!nr'=>($end)?t('Last'):t('First'))),
+              'empty'=>t('Empty Address'),
+              'fix'=>t('Fix Address'),
+              'user' =>t('User field'),
+              );
+}
+
+function _cck_gmapaddress_addroutestartend($key,&$addresses,$opt,$end=FALSE){
+    //print '<bR>18';
+    switch ($key) {
+        case 'empty':
+    //print '<bR>18_1';
+            $val = '-';
+            break;
+        case 'fix':
+    //print '<bR>18_2';
+            $val = $opt;
+            break;
+        case 'user':
+    //print '<bR>18_3';
+            GLOBAL $user;
+            $array = array();
+            user_module_invoke('load', $array, $user, $category = NULL);
+            $val = _cck_gmapaddress_userfield($opt,$user);
+            $val = str_replace(array("\r\n", "\n", "\r"), ", ", $val);
+            break;
+        default:
+    //print '<bR>18_4';
+            return FALSE;
+    }
+
+    return ($end)?array_push($addresses,$val):array_unshift($addresses,$val);
+}
+
+//Add multiple userfields to Address String
+function _cck_gmapaddress_userfield($str,&$user,$sep=array(", ",","," ")){
+    //print '<bR>19';
+    $return = _cck_gmapaddress_fetch_object($str,$user,$sep);
+    if ($return == ""){return "-";}
+    return $return;
+}
+
+//Create a string from object's string-fields($str)
+function _cck_gmapaddress_fetch_object($str,&$object,$sep=array(", ",","," "),$index=0,$indextok="%",$currenttok="!"){
+    //print '<bR>20';
+    $vals = array($str);
+    $seps = array(0=>"");
+
+    foreach ($sep as $k=>$s){
+        $vals2 = array();
+        $seps2 = array();
+        foreach($vals as $n=>$v){
+            $arr = explode($s,$v);
+            foreach ($arr as $i=>$v2){
+              $vals2[]=$v2;
+              $seps2[]=($i>0)?$s:$seps[$n];
+            }
+        }
+        $vals = $vals2;
+        $seps = $seps2;
+    }
+    $return = '';
+    $valpur = array();
+    foreach($vals as $k=>$val){
+      if (strlen($val)>0){
+        //take
+        //$val = "object->$val";
+        //$temp = eval("return \$$val;");
+        $temp = _cck_gmapaddress_get_val($val,$object,$index,$indextok,$currenttok);
+        $valpur[] = $temp;
+        $return .= $seps[$k].$temp;
+      }
+    }
+    if (!strlen(implode("",$valpur))){return '';}
+    return check_plain((strlen($return)>0)?$return:'');
+}
+
+//Gets some value, by replacing index, fecthing current array and/or call a callback function (given by prefix, dfined in $funcarr)
+function _cck_gmapaddress_get_val($str,$object,$index=0,$indextok="%",$currenttok="!"){
+    //print '<bR>21';
+    $funcarr = array(
+        'tname|'=>'_cck_gmapaddress_get_termname',
+        'contax|'=>'_cck_gmapaddress_get_contaxname',
+    );
+    $callback = FALSE;
+    foreach ($funcarr as $key=>$func){
+        if (strpos($str,$key) === 0){
+            $callback = $func;
+            $str = substr($str,strlen($key));
+            break;
+        }
+    }
+
+    $str = str_replace($indextok,$index,$str);
+    $val = "object->";
+    $tok = "[$currenttok]";
+    list($newstr,$str) = explode($tok,$str,2);
+    while ($str){
+        ////print "$newstr|$str|||";
+        $val .= $newstr;
+        $object = current(eval("return \$$val;"));
+        $val = "object";
+        list($newstr,$str) = explode($tok,$str,2);
+    }
+    $val .= $newstr;
+    $val = eval("return \$$val;");
+    return ($callback)?$callback($val):$val;
+}
+
+function _cck_gmapaddress_get_termname($tid){
+    //print '<bR>23';
+    $term = taxonomy_get_term($tid);
+    return $term->name;
+}
+function _cck_gmapaddress_get_contaxname($val){
+    //print '<bR>24';
+    if (is_array($val[0])){
+        $val = $val[0];
+    }
+    if (is_array($val)){
+        list($key,$arr) = each($val);
+        if ($arr->name) {
+            return $arr->name;
+        } else {
+            return _cck_gmapaddress_get_termname($key);
+        }
+    }
+    return ;
+}
+
+//Append 'px', if no string
+function _cck_gmapaddress_addpx($str){
+    //print '<bR>25';
+    return (is_int($str))?$str:$str.'px';
+}
+
+function _cck_gmapaddress_mtc($val = '-1'){
+    //print '<bR>26';
+$arr = array(0 => 'none',
+             1 => 'standard',
+             2 => 'hier',
+             3 => 'menu',
+        );
+ return $arr[$val];
+}
+
+function _cck_gmapaddress_controltype($val = '-1'){
+    //print '<bR>27';
+$arr = array(0 => 'None',
+             's' => 'Small',
+             'l' => 'Large',
+        );
+ return $arr[$val];
+}
+
+/**
+ * Generate GMap Rout Link
+ **/
+function _cck_gmapaddress_routelink($addresses,$field,$text='',$attributes = array()){
+    //print '<bR>28';
+$addresses= array_values($addresses);
+$text = ($text)?$text:'Route';
+
+$path = "http://maps.google.".$field['tld']."/maps";
+$saddr = '';
+$daddr = array();
+
+ foreach ($addresses as $nr=>$adr){
+    if ($nr>0){
+        $daddr[]=$adr;
+    } else {
+        $saddr = $adr;
+    }
+ }
+//commented by pb
+ //return l($text, $path, $attributes, "f=d&saddr=$saddr&daddr=".implode('+to:',$daddr), NULL, TRUE, FALSE);
+
+ return l($text, $path, array('attributes' => $attributes, 'query' => "f=d&saddr=$saddr&daddr=".implode('+to:',$daddr), 'fragment' => NULL, 'absolute' => TRUE, 'html' => FALSE));
+
+/** http://maps.google.de/maps?
+                    f=d
+                    &hl=de
+                    &geocode=
+                    &saddr=Holzminden
+                    &daddr=Karlsruhe
+                        +to:bozen
+                    &mra=pi
+                    &mrcr=1
+                    &sll=50.41419,9.002155
+                    &sspn=4.809747,14.018555
+                    &ie=UTF8
+                    &z=6
+*/
+}
+
+/**
+ * Hook_block()
+ *
+ * Provides some blocks for showing an address or google map in a separate Block.
+ */
+ function cck_gmapaddress_block($op = 'list', $delta = 0, $edit = array()) {
+     //print '<bR>29';
+  $count = variable_get('cck_gmapaddress_count',  1);
+  switch ($op) {
+    case 'list':
+    //print '<bR>29_1';
+      for ($i=0;$i < $count;$i++){
+        $blocks[$i]['info'] =  t('Gmap Address #@nr',array('@nr'=>$i+1));
+      }
+      return $blocks;
+    case 'configure':
+    //print '<bR>29_2';
+      $form = array();
+      if ($delta == 0) {
+        $form['cck_gmapaddress_count'] = array(
+          '#type' => 'select',
+          '#title' => t('Numbers of GMap Address blocks'),
+          '#description' => t('Select, how many blocks shall be configurable.'),
+          '#default_value' => variable_get('cck_gmapaddress_count',  1),
+          '#options' => array_combine(range(1,9),range(1,9)),
+        );
+      }
+      $form['cck_gmapaddress_field'] = array(
+          '#type' => 'select',
+          '#title' => t('Node Reference Field'),
+          '#description' => t('The name of the cck GMapAddress field, which content should be presented.'),
+          '#default_value' => variable_get("cck_gmapaddress_field_$delta",  ''),
+          '#options' => _cck_gmapaddress_fields(),
+      );
+      $form['cck_gmapaddress_formatter'] = array(
+          '#type' => 'select',
+          '#title' => t('Formatter'),
+          '#description' => t('Select a formatter for block view.'),
+          '#default_value' => variable_get("cck_gmapaddress_formatter_$delta",  ''),
+          '#options'=>_cck_gmapaddress_formatters(),
+      );
+      return $form;
+    case 'save':
+    //print '<bR>29_3';
+      if ($delta == 0) {
+        variable_set("cck_gmapaddress_count", $edit['cck_gmapaddress_count']);
+      }
+      variable_set("cck_gmapaddress_field_$delta", $edit['cck_gmapaddress_field']);
+      variable_set("cck_gmapaddress_formatter_$delta", $edit['cck_gmapaddress_formatter']);
+      return;
+    case 'view':
+    //print '<bR>29_4';
+      //Zeige GMapAddress in gewähltem Format, falls node
+      $fieldname = variable_get("cck_gmapaddress_field_$delta",  '');
+      if (strlen($fieldname)==0){return '';}
+      $nid = _cck_gmapaddress_getnid($delta);
+      if (!$nid){return '';}
+      $node = node_load($nid);
+      $field = content_fields($fieldname,$node->type);
+      $node_field = $node->$fieldname;
+      $formatter = variable_get("cck_gmapaddress_formatter_$delta",  '');
+      if (!empty($node_field)){
+          foreach ($node_field as $i => $item) {
+            $node_field[$i]['view'] = cck_gmapaddress_field_formatter($field, $item, $formatter, $node, TRUE);
+          }
+          $block['subject'] = $field['label'];
+          $block['content'] = theme('field', $node, $field, $node_field,NULL,NULL);
+      }
+      return $block;
+  }
+}
+
+function _cck_gmapaddress_fields(){
+    //print '<bR>30';
+    $fields = content_fields();
+    $return = array();
+    foreach ($fields as $field) {
+        if ($field['type'] == 'cck_gmapaddress'){
+            $return[] = $field['field_name'];
+        }
+    }
+    return array_combine($return,$return);
+}
+
+function _cck_gmapaddress_formatters(){
+    //print '<bR>31';
+    $return = array();
+    $formatters = cck_gmapaddress_field_formatter_info();
+    foreach ($formatters as $f=>$info){
+        $return[$f]=$info['label'];
+    }
+    return $return;
+}
+
+function _cck_gmapaddress_getblock($delta=0){
+    //print '<bR>32';
+    return db_fetch_array(db_query("SELECT pages, visibility, custom, title FROM {blocks} WHERE module = '%s' AND delta = '%s'", 'cck_gmapaddress', $delta));
+}
+
+function _cck_gmapaddress_getnid($delta){
+    //print '<bR>33';
+    $block = _cck_gmapaddress_getblock($delta);
+    $vis = $block['visibility'];
+    $pages = $block['pages'];
+    if ($vis == 2){ //php-code
+        // take returned int as nid
+        return drupal_eval($pages);
+    } else {//only listed
+        //fetch first integer with *-replacement
+        $pages = explode('||',str_replace(array("\r\n", "\n", "\r"), "||", $pages));
+        $nid = 0;
+        foreach ($pages as $nr=>$page){
+            $page = explode('/',$page);
+            $nid = 0;
+            foreach($page as $n=>$p){
+//                print "<br/>P:$p-".arg($n);
+                if ($p== '$'){
+                    $nid = 1*arg($n);
+                } elseif ($p == '*' && $nid == 0){
+                  $nid = 1*arg($n);
+                } elseif ($p != arg($n)){
+                  $nid = 0;
+                  break;
+                }
+            }
+            if (is_int($nid) && $nid>0 && $vis == 1){
+                return $nid;
+            } elseif (is_int($nid) && $nid>0 && $vis == 0) {
+                break;  //break, because query is in banned list
+            }
+        }
+    }
+    if ($nid != 0){return 0;}
+    //fetch first integer as nid, for sites that were not banned
+    if ($vis == 0) {
+        for ($i=0;$i<=5;$i++){
+            $nid = 1*arg($i);
+            if ($nid !== ''){
+                $nid *= (is_int($nid) && $nid > 0);
+                if ($nid>0){ return $nid;}
+            }
+        }
+    }
+
+    return $nid;
+}
+
+?>

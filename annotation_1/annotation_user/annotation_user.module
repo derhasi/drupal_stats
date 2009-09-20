@@ -11,11 +11,10 @@
 /**
  * Implementation of hook_annotation_info().
  */
-function annotation_user_annotation_info($type) {
-  $info = array();
-  switch ($type) {
-    case 'content':
-      $info['user'] = array(
+function annotation_user_annotation_info() {
+  return array(
+    'content' => array(
+      'user' => array(
         'title' => t('User'),
         'help' => t('Provides users as content for an annotation.'),
         'relation' => array(
@@ -25,10 +24,9 @@ function annotation_user_annotation_info($type) {
         'load' => 'user_load',
         'view' => 'annotation_user_view',
         'form' => 'annotation_user_form',
-      );
-      break;
-  }
-  return $info;
+      ),
+    ),
+  );
 }
 
 /**
