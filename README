@@ -1,0 +1,8 @@
+This repository is separated in different folders:
+
+* annotation_1
+  - a new annotation module with API, to test some concepts and work out new ones. I hope some of this will be merged
+    into drupal.org/project/annotation
+
+* annotation_marker
+  - a module to work with an annotation marker (x,y, width, height) as form element
