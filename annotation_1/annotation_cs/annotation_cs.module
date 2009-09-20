@@ -1,0 +1,116 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   a low level implementation for annotation_api. It supports user annotation
+ *   in node scope
+ */
+
+function annotation_cs_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks[0] = array(
+      'info' => t('Annotation CS'),
+      'weight' => 0,
+      'status' => 1,
+      'region' => 'right'
+    );
+    return $blocks;
+  }
+  else if ($op == 'configure' && $delta == 0) {
+    $form = array();
+    return $form;
+  }
+  else if ($op == 'save' && $delta == 0) {
+    //variable_set('mymodule_block_items', $edit['items']);
+  }
+  else if ($op == 'view') {
+    switch($delta) {
+      case 0:
+        $pos = variable_get('annotation_cs_object_position', 1);
+        $nid = arg($pos);
+        $node = node_load($nid);
+        $node_types = variable_get('annotation_cs_node_types', array());
+        if (isset($node->annotation) || in_array($node->type, $node_types)) {
+          $block = array(
+            'subject' => t('Annotations for %title', array('%title' => $node->title)),
+            'content' => annotation_cs_view_annotations($node),
+          );
+        }
+        break;
+    }
+    return $block;
+  }
+
+}
+
+function annotation_cs_view_annotations($node) {
+  // As annotation_node allready loads all available annotations to $node, no
+  // additional loading is needed.
+  $content = array();
+  if (isset($node->annotation)) {
+    //dpm($node->annotation);
+    foreach ($node->annotation as $annotation) {
+      $content[] = array(
+        '#value' => annotation_view($annotation),
+      );
+    }
+  }
+
+  /**
+   * Add an add form
+   */
+  $default = variable_get('annotation_cs_default_vars', '.field-field-bild .field-items|0px|0px');
+  GLOBAl $user;
+  $new = array(
+    'uid' => $user->uid,
+    'type' => 'point',
+    'vars' => $default,
+    'scope_type' => 'node',
+    'scope_id' => $node->nid,
+    'content_type' => 'user',
+  );
+  $content['annotation_add'] = array('#value' => drupal_get_form('annotation_form', $new));
+
+  return drupal_render($content);
+}
+
+
+function annotation_cs_form_alter(&$form, $form_state, $form_id) {
+  //dpm(func_get_args());
+}
+
+function annotation_cs_menu() {
+  return array(
+    'admin/settings/annotation_cs' => array(
+      'title' => 'Annotation CS',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('annotation_cs_settings_form'),
+      'access arguments' => array('administer content types'),
+    )
+  );
+}
+
+function annotation_cs_settings_form(&$form_state) {
+  $form['annotation_cs_default_vars'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Default settings',
+    '#default_value' => variable_get('annotation_cs_default_vars', '.field-field-bild .field-items|0px|0px'),
+    '#description' => 'Format: <code>jquery selector|default_left|default_top</code>',
+  );
+  $form['annotation_cs_object_position'] = array(
+    '#type' => 'select',
+    '#title' => t('Menu get object position'),
+    '#options' => range(0,30),
+    '#default_value' => variable_get('annotation_cs_object_position', 1),
+    '#description' => t('Position of the node ID in the URL. This NID will be used to get the node object for the annotations.'),
+  );
+  $form['annotation_cs_node_types'] = array(
+    '#type' => 'select',
+    '#title' => t('Node types'),
+    '#options' => node_get_types('names'),
+    '#default_value' => variable_get('annotation_cs_node_types', array()),
+    '#multiple' => TRUE,
+  );
+  return system_settings_form($form);
+}
