@@ -1,7 +1,0 @@
-; $Id$
-name = Annotation CCK
-description = A module that provides an annotation cck field. Proof of concept module at the moment, not yet dependent on annotation.module.
-core = 6.x
-package = "Annotation"
-dependencies[] = annotation_marker
-;dependencies[] = prepopulate
