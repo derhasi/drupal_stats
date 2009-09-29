@@ -3,6 +3,8 @@
 /**
  * These functions are part of an administratable UI for combining annotation
  * types with different scopes and content.
+ *
+ * They are not implemented yet.
  */
 
 /**

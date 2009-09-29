@@ -27,21 +27,32 @@ function annotation_cs_block($op = 'list', $delta = 0, $edit = array()) {
   else if ($op == 'view') {
     switch($delta) {
       case 0:
-        $pos = variable_get('annotation_cs_object_position', 1);
-        $nid = arg($pos);
-        $node = node_load($nid);
-        $node_types = variable_get('annotation_cs_node_types', array());
-        if (isset($node->annotation) || in_array($node->type, $node_types)) {
-          $block = array(
-            'subject' => t('Annotations for %title', array('%title' => $node->title)),
-            'content' => annotation_cs_view_annotations($node),
-          );
-        }
+        $block = annotation_cs_block_view();
         break;
     }
     return $block;
   }
 
+}
+
+/**
+ * View it.
+ */
+function annotation_cs_block_view() {
+  $pos = variable_get('annotation_cs_object_position', 1);
+  $nid = arg($pos);
+  $node = node_load($nid);
+  $node_types = variable_get('annotation_cs_node_types', array());
+  if (isset($node->annotation) || in_array($node->type, $node_types)) {
+    $block = array(
+      'subject' => t('Annotations for %title', array('%title' => $node->title)),
+      'content' => annotation_cs_view_annotations($node),
+    );
+  }
+  else {
+    $block = NULL;
+  }
+  return $block;
 }
 
 /**
@@ -74,6 +85,38 @@ function annotation_cs_view_annotations($node) {
   );
   $content['annotation_add'] = array('#value' => drupal_get_form('annotation_form', $new));
 
+  $vars = explode('|', $default);
+  $selector = current($vars);
+
+  // Control buttons
+  $sets = array(
+    'selector' => $selector,
+    'adder_show' => t('Add annotation'),
+    'adder_hide' => t('Hide annotation add'),
+    'viewer_show' => t('View annotations'),
+    'viewer_hide' => t('Hide annotations'),
+    'adder_default' => 'show',
+    'viewer_default' => 'hide',
+  );
+
+  if (user_access('add annotation_cs')) {
+    $links['adder'] = array('href' => $_GET['q'], 'title' => $sets['adder_'. $sets['adder_default']], 'attributes' => array('rel' => $sets['adder_default']), 'fragment' => 'annotation-cs');
+  }
+  if (user_access('view annotation_cs')) {
+    $links['viewer'] = array('href' => $_GET['q'], 'title' => $sets['viewer_'. $sets['viewer_default']], 'attributes' => array('rel' => $sets['viewer_default']), 'fragment' => 'annotation-cs');
+  }
+  if (user_access('show manage annotation_cs')) {
+    $links['manage'] = array('href' => 'node/'. $node->nid . '/annotations', 'title' => t('Manage annotations'));
+  }
+  $attributes = array('class' => 'annotation-cs-control');
+
+  drupal_add_js(array('annotation_cs_control' => $sets), 'setting');
+  drupal_add_js(drupal_get_path('module', 'annotation_cs') .'/annotation_cs.js', 'module');
+
+  $content['links'] = array(
+    '#value' => theme('links', $links, $attributes),
+  );
+
   return drupal_render($content);
 }
 
@@ -83,7 +126,6 @@ function annotation_cs_view_annotations($node) {
  */
 function annotation_cs_annotation_info_alter(&$info) {
   $info['content']['user']['form'] = 'annotation_cs_user_form';
-
 }
 
 /**
@@ -94,24 +136,29 @@ function annotation_cs_user_form(&$form_state, $annotation) {
   $set = variable_get('annotation_cs_user_view', array('view' => 'freunde', 'display' => 'page_1'));
 
   $view = views_get_view($set['view']);
-  $view->set_arguments(array($annotation->uid, $annotation->scope_id, $annotation->content_id));
-  $view->set_display($set['display']);
-  //$view->init_display();
-  $view->pre_execute();
-  $view->execute();
-  $options = array();
-  $in_options = FALSE;
-  foreach ($view->result as $u) {
-    if ($u->uid == $annotation->content_id) $in_options = TRUE;
-    $options[$u->uid] = $u->users_name;
+  if (0) {
+    GLOBAL $user;
+    $options = array($user->uid => $user->name);
   }
+  else {
+    $view->set_arguments(array($annotation->uid, $annotation->scope_id, $annotation->content_id));
+    $view->set_display($set['display']);
+    //$view->init_display();
+    $view->pre_execute();
+    $view->execute();
+    $options = array();
+    $in_options = FALSE;
+    foreach ($view->result as $u) {
+      if ($u->uid == $annotation->content_id) $in_options = TRUE;
+      $options[$u->uid] = $u->users_name;
+    }
 
-  // Add current selection
-  if (!$in_options && $annotation->content_id) {
-    $u_name = db_result(db_query_range('SELECT name FROM {users} WHERE uid = %d', $annotation->content_id, 0, 1));
-    $options = array_merge( array($annotation->content_id => $u_name), $options);
+    // Add current selection
+    if (!$in_options && $annotation->content_id) {
+      $u_name = db_result(db_query_range('SELECT name FROM {users} WHERE uid = %d', $annotation->content_id, 0, 1));
+      $options = array_merge( array($annotation->content_id => $u_name), $options);
+    }
   }
-
   //$options = array(0, 1);
   return array(
     '#type' => 'select',
@@ -157,6 +204,9 @@ function annotation_cs_menu() {
  */
 function annotation_cs_perm() {
   return array(
+    'add annotation_cs',
+    'view annotation_cs',
+    'show manage annotation_cs',
     'manage any annotation_cs',
     'manage own annotation_cs',
     'manage annotation_cs from own node',
@@ -274,6 +324,7 @@ function annotation_cs_settings_form(&$form_state) {
     '#title' => t('Delete Button Label'),
     '#default_value' => variable_get('annotation_cs_delete_button_label', 'X'),
   );
+
   return system_settings_form($form);
 }
 
@@ -317,12 +368,6 @@ function annotation_cs_delete_submit($form, &$form_state) {
   if (drupal_substr($id, 0, 23) == 'annotatation_cs_delete_') {
     $aid = drupal_substr($id, 23);
     $res = annotation_delete($aid);
-    if ($res) {
-      drupal_set_message(t('Annotation %aid deleted', array('%aid' => $aid)));
-    }
-    else {
-      drupal_set_message(t('Could not delete annotation %aid!', array('%aid' => $aid)));
-    }
   }
 }
 
@@ -344,4 +389,13 @@ function annotation_cs_delete_form(&$form_state, $aid) {
 function annotation_cs_preprocess_annotation_user(&$vars) {
   $aid = $vars['annotation']->aid;
   $vars['delete_button'] = drupal_get_form('annotation_cs_delete_form', $aid);
+}
+
+/**
+ * Remove Show/Hide button
+ */
+function annotation_cs_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'annotation_form' && $form['#annotation']->type == 'point') {
+    unset($form['adder']);
+  }
 }

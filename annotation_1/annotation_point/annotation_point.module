@@ -62,6 +62,5 @@ function annotation_point_form_annotation_form_alter(&$form, $form_state) {
     drupal_add_css(drupal_get_path('module','annotation_point'). '/annotation_point.css', 'module');
     jquery_ui_add(array('ui.draggable'));
     drupal_add_js(drupal_get_path('module','annotation_point'). '/annotation_point_form.js', 'module');
-    //dpm($form);
   }
 }
