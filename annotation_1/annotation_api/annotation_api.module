@@ -60,6 +60,51 @@ function _annotation_prepare_object(&$annotation) {
 }
 
 /**
+ * Populate the annotation object with scope and content objects.
+ */
+function annotation_load_objects(&$annotation) {
+  if (!isset($annotation->settings)) {
+    $info = annotation_api_info();
+    $annotation->settings = array(
+      'scope' => $info['scope'][$annotation->scope_type],
+      'annotation' => $info['annotation'][$annotation->type],
+      'content' => $info['content'][$annotation->content_type],
+    );
+  }
+
+  // Scope
+  if ($annotation->settings['scope']['load']) {
+    $func = $annotation->settings['scope']['load'];
+    if ($func === TRUE) {
+      $func = $annotation->scope_type .'_load';
+    }
+    if (function_exists($func)) {
+      $annotation->scope = call_user_func($func, $annotation->scope_id);
+    }
+    else {
+      $annotation->scope = NULL;
+    }
+  }
+
+  // Content
+  if ($annotation->settings['content']['load']) {
+    $func = $annotation->settings['content']['load'];
+    if ($func === TRUE) {
+      $func = $annotation->content_type .'_load';
+    }
+    if (function_exists($func)) {
+      $annotation->content = call_user_func($func, $annotation->content_id);
+    }
+    else {
+      $annotation->content = NULL;
+    }
+  }
+
+  // User
+  $annotation->user = user_load($annotation->uid);
+}
+
+/**
  * Submit function for annotation form.
  */
 function annotation_form_submit($form, &$form_state) {
@@ -138,6 +183,12 @@ function annotation_save($annotation) {
     $op = 'insert';
     if (!$annotation->timestamp) $annotation->timestamp = time();
     $ret = drupal_write_record('annotation', $annotation);
+
+    // Rules implementation
+    if (module_exists('rules')) {
+      annotation_load_objects($annotation);
+      rules_invoke_event("annotation_add:$annotation->scope_type:$annotation->content_type", $annotation->scope, $annotation->content, $annotation->user, $annotation);
+    }
   }
   else {
     $op = 'update';
@@ -191,6 +242,31 @@ function annotation_load($params, $reset = FALSE) {
     $annotations[serialize($params)] = $return;
   }
   return $annotations[serialize($params)];
+}
+
+/**
+ * Delete a single annotation by aid.
+ */
+function annotation_delete($aid) {
+  if (is_object($aid)) {
+    $annotation = $aid;
+    $aid = $annotation->aid;
+  }
+  else {
+    $annotation = annotation_load($aid);
+  }
+
+  $query = 'DELETE FROM {annotation} WHERE aid = %d';
+  db_query($query, $aid);
+  $aff = db_affected_rows();
+
+    // Rules implementation
+  if (module_exists('rules')) {
+    annotation_load_objects($annotation);
+    rules_invoke_event("annotation_deleted:$annotation->scope_type:$annotation->content_type", $annotation->scope, $annotation->content, $annotation->user, $annotation);
+  }
+
+  return $aff;
 }
 
 /**

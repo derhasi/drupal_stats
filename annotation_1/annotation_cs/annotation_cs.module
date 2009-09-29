@@ -44,12 +44,14 @@ function annotation_cs_block($op = 'list', $delta = 0, $edit = array()) {
 
 }
 
+/**
+ * View function for annotation_cs block.
+ */
 function annotation_cs_view_annotations($node) {
   // As annotation_node allready loads all available annotations to $node, no
   // additional loading is needed.
   $content = array();
   if (isset($node->annotation)) {
-    //dpm($node->annotation);
     foreach ($node->annotation as $annotation) {
       $content[] = array(
         '#value' => annotation_view($annotation),
@@ -76,10 +78,53 @@ function annotation_cs_view_annotations($node) {
 }
 
 
-function annotation_cs_form_alter(&$form, $form_state, $form_id) {
-  //dpm(func_get_args());
+/**
+ *
+ */
+function annotation_cs_annotation_info_alter(&$info) {
+  $info['content']['user']['form'] = 'annotation_cs_user_form';
+
 }
 
+/**
+ * Subform for annotation form.
+ */
+function annotation_cs_user_form(&$form_state, $annotation) {
+
+  $set = variable_get('annotation_cs_user_view', array('view' => 'freunde', 'display' => 'page_1'));
+
+  $view = views_get_view($set['view']);
+  $view->set_arguments(array($annotation->uid, $annotation->scope_id, $annotation->content_id));
+  $view->set_display($set['display']);
+  //$view->init_display();
+  $view->pre_execute();
+  $view->execute();
+  $options = array();
+  $in_options = FALSE;
+  foreach ($view->result as $u) {
+    if ($u->uid == $annotation->content_id) $in_options = TRUE;
+    $options[$u->uid] = $u->users_name;
+  }
+
+  // Add current selection
+  if (!$in_options && $annotation->content_id) {
+    $u_name = db_result(db_query_range('SELECT name FROM {users} WHERE uid = %d', $annotation->content_id, 0, 1));
+    $options = array_merge( array($annotation->content_id => $u_name), $options);
+  }
+
+  //$options = array(0, 1);
+  return array(
+    '#type' => 'select',
+    '#options' => $options,
+    //'#title' => t('User'),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ *
+ * Provides settings page and node edit page.
+ */
 function annotation_cs_menu() {
   return array(
     'admin/settings/annotation_cs' => array(
@@ -87,10 +132,102 @@ function annotation_cs_menu() {
       'page callback' => 'drupal_get_form',
       'page arguments' => array('annotation_cs_settings_form'),
       'access arguments' => array('administer content types'),
-    )
+    ),
+    'node/%node/annotations' => array(
+      'title' => 'Manage Annotations',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('annotation_cs_node_form', 1),
+      'access callback' => 'annotation_cs_access_node',
+      'access arguments' => array(1),
+      'file' => 'node.inc',
+    ),
+    /**'annotations/%annotation/delete' => array(
+      'title' => 'Manage Annotations',
+      'page callback' => 'annotation_cs_annotation_delete',
+      'page arguments' => array(1),
+      'access callback' => 'annotation_cs_access_annotation',
+      'access arguments' => array(1),
+      'file' => 'node.inc',
+    ),*/
   );
 }
 
+/**
+ * Implementation of hook_perm().
+ */
+function annotation_cs_perm() {
+  return array(
+    'manage any annotation_cs',
+    'manage own annotation_cs',
+    'manage annotation_cs from own node',
+    'manage annotation_cs to own profile'
+  );
+}
+
+/**
+ * Access callback for annotation_cs node edit form.
+ */
+function annotation_cs_access_node($node, $account = NULL) {
+  if (!isset($account)) {
+    GLOBAL $user;
+    $account = $user;
+  }
+  if (user_access('manage any annotation_cs', $account)) {
+    return TRUE;
+  }
+  elseif (user_access('manage annotation_cs from own node', $account) && $node->uid == $account->uid) {
+    return TRUE;
+  }
+  if (isset($node->annotation) && count($node->annotation)) {
+    $own = user_access('manage own annotation_cs');
+    $to_profile = user_access('manage annotation_cs to own profile');
+    foreach ($node->annotation as $annotation) {
+      if ($own && $annotation->uid == $account->uid) {
+        return TRUE;
+      }
+      elseif($to_profile && $annotation->content_id == $account->uid) {
+        return TRUE;
+      }
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback for annotation_cs access delete form.
+ */
+function annotation_cs_access_annotation($annotation, $account = NULL) {
+  if (!is_object($annotation)) {
+    if (is_array($annotation)) {
+      $annotation = (object) $annotation;
+    }
+    else {
+      $annotation = annotation_load($annotation);
+    }
+  }
+  if (!isset($account)) {
+    GLOBAL $user;
+    $account = $user;
+  }
+  if (user_access('manage any annotation_cs', $account)) {
+    return TRUE;
+  }
+  elseif (user_access('manage own annotation_cs') && $annotation->uid == $account->uid) {
+    return TRUE;
+  }
+  elseif(user_access('manage annotation_cs to own profile') && $annotation->content_id == $account->uid) {
+    return TRUE;
+  }
+  elseif (user_access('manage annotation_cs from own node', $account)) {
+    $node = node_load($annotation->scope_id);
+    return ($node->uid == $account->uid);
+  }
+  return FALSE;
+}
+
+/**
+ * Settings form for annotation_cs.
+ */
 function annotation_cs_settings_form(&$form_state) {
   $form['annotation_cs_default_vars'] = array(
     '#type' => 'textfield',
@@ -112,5 +249,99 @@ function annotation_cs_settings_form(&$form_state) {
     '#default_value' => variable_get('annotation_cs_node_types', array()),
     '#multiple' => TRUE,
   );
+  $set = variable_get('annotation_cs_user_view', array('view' => 'freunde', 'display' => 'page_1'));
+  $form['annotation_cs_user_view'] = array(
+    '#tree' => TRUE,
+    '#type' => 'fieldset',
+    '#title' => t('User selection view'),
+    '#collapsible' => TRUE,
+    'view' => array(
+      '#type' => 'textfield',
+      '#title' => t('View id'),
+      '#default_value' => $set['view'],
+      '#required' => TRUE,
+    ),
+    'display' => array(
+      '#type' => 'textfield',
+      '#title' => t('Display id'),
+      '#default_value' => $set['display'],
+      '#required' => TRUE,
+    ),
+    '#description' => t('The view is provided with three arguments. 1st - User ID of the annotator, 2nd - Node ID to annotate in, 3rd - the content user id'),
+  );
+  $form['annotation_cs_delete_button_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Delete Button Label'),
+    '#default_value' => variable_get('annotation_cs_delete_button_label', 'X'),
+  );
   return system_settings_form($form);
+}
+
+function annotation_cs_theme() {
+  return array(
+    'annotation_cs_delete' => array(
+      'arguments' => array('element' => NULL),
+    )
+  );
+}
+
+
+function annotation_cs_elements() {
+  return array(
+    'annotation_cs_delete' => array(
+      '#input' => TRUE,
+      '#process' => array('annotation_cs_delete_process'),
+      //'#title' => t('Delete'),
+      //'#value' => ?,
+    ),
+  );
+}
+
+
+function annotation_cs_delete_process($element) {
+  $aid = $element['#value'];
+  $title = (isset($element['#title'])) ? $element['#title'] : t('Delete');
+  if ($aid && annotation_cs_access_annotation($aid)) {
+    $element['annotatation_cs_delete_'. $aid] = array(
+      '#type' => 'submit',
+      '#value' => $title,
+      '#submit' => array('annotation_cs_delete_submit'),
+    );
+  }
+  return $element;
+}
+
+function annotation_cs_delete_submit($form, &$form_state) {
+  $id = current($form_state['clicked_button']['#parents']);
+  // only valid for prefix: annotatation_cs_delete_
+  if (drupal_substr($id, 0, 23) == 'annotatation_cs_delete_') {
+    $aid = drupal_substr($id, 23);
+    $res = annotation_delete($aid);
+    if ($res) {
+      drupal_set_message(t('Annotation %aid deleted', array('%aid' => $aid)));
+    }
+    else {
+      drupal_set_message(t('Could not delete annotation %aid!', array('%aid' => $aid)));
+    }
+  }
+}
+
+function theme_annotation_cs_delete($element) {
+  unset($element['#value']);
+  unset($element['#title']);
+  return theme('item', $element);
+}
+
+function annotation_cs_delete_form(&$form_state, $aid) {
+  $form['button'] = array(
+    '#type' => 'annotation_cs_delete',
+    '#value' => $aid,
+    '#title' => variable_get('annotation_cs_delete_button_label', 'X'),
+  );
+  return $form;
+}
+
+function annotation_cs_preprocess_annotation_user(&$vars) {
+  $aid = $vars['annotation']->aid;
+  $vars['delete_button'] = drupal_get_form('annotation_cs_delete_form', $aid);
 }

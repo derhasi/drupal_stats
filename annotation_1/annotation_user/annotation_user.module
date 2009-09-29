@@ -34,7 +34,6 @@ function annotation_user_annotation_info() {
  */
 function annotation_user_view($auser, $annotation) {
   return theme('annotation_user', $auser, $annotation);
-  return l($user->name,'user/'. $user->uid);
 }
 
 function annotation_user_theme() {
@@ -48,6 +47,16 @@ function annotation_user_theme() {
 
 function template_preprocess_annotation_user($vars) {
   // here can come some preprocessing....
+
+  $annotator = user_load($vars['annotation']->uid);
+  $vars['annotator'] = $annotator;
+  $vars['annotator_name'] = $annotator->name;
+  $vars['annotator_link'] = l($annotator->name, 'user/'. $annotator->uid);
+  $vars['annotation_date'] = format_date($vars['annotation']->timestamp, 'medium');
+  $vars['content_name'] = $vars['annotation_user']->name;
+  $vars['content_link'] = l($vars['annotation_user']->name, 'user/'. $vars['annotation_user']->uid);
+  $vars['annotated_by'] = t('annotated by !annotator', array('!annotator' => $vars['annotator_link']));
+
 }
 
 /**

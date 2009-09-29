@@ -67,6 +67,7 @@ function annotation_node_annotation_info() {
           'table' => 'node',
           'field' => 'nid',
         ),
+        'load' => 'node_load',
       ),
     ),
     'content' => array(

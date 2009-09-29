@@ -36,10 +36,10 @@ Drupal.behaviors.annotation_point_form = function (context) {
       $(this).prepend($(this).find('.dragger'));
 
       //Make form draggable
-      if (jQuery.isFunction($(this).draggable)) {
+      //if (jQuery.isFunction($(this).draggable)) {
         $(this).draggable({ cursorAt: { left: 5 }, handle: $(this).children('div.dragger'), containment: selector, opacity: 0.3 });
         $(this).addClass('draggable-processed');
-      }
+      //}
 
       $(this).bind('dragstop', function(event, ui) {
         var vars = selector + '|' + $(this).css('left') + '|' + $(this).css('top');

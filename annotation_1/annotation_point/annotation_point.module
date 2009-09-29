@@ -29,6 +29,21 @@ function annotation_point_annotation_info() {
 function annotation_point_view($annotation, $content) {
   list($container, $posx, $posy, $width, $height, $cwidth, $cheight) = explode('|', $annotation->vars);
   $output = '<div class="annotation-point" rel="'. $annotation->vars .'"><div class="content">'. $content .'</div></div>';
+
+/**
+  TO COME: more generic behaviour with settings array
+  $settings = array(
+    'aid' => $annotation->aid,
+    'container' => $container,
+    'posx' => $posx,
+    'posy' => $posy,
+  ) + (array) $annotation;
+  drupal_add_js(array('annotation_point' => array($annotation->aid => $settings)), 'setting');
+*/
+
+  // Leave old behaviour at the momen
+  //$output = "<div id=\"annotation-point-$annotation->aid\" class=\"annotation-point\"><div class=\"content\">$content</div></div>";
+
   drupal_add_css(drupal_get_path('module','annotation_point'). '/annotation_point.css', 'module');
   drupal_add_js(drupal_get_path('module','annotation_point'). '/annotation_point.js', 'module');
   return $output;
