@@ -91,6 +91,15 @@ function annotation_api_views_data() {
         'handler' => 'views_handler_argument',
       ),
     ),
+    'annotated' => array(
+      'title' => t('Annotated'),
+      'help' => t('Filter to ensure content has or has not been annotated.'),
+      'real field' => 'uid',
+      'filter' => array(
+        'handler' => 'annotation_api_handler_filter_annotated',
+        'label' => t('Flagged'),
+      ),
+    ),
 
   );
 
@@ -185,6 +194,31 @@ function annotation_api_views_data_alter(&$data) {
       );
     }
   }
+
+  // Content
+  $info = annotation_api_info('content');
+  foreach ($info as $key => $item) {
+    if (isset($item['relation'])) {
+      $data[$item['relation']['table']]["annotation_content_$key"] = array(
+        'real field' => $item['relation']['field'],
+        'title' => t('Annotation: Content'),
+        'help' => $item['help'],
+        'relationship' => array(
+          'base' => 'annotation',
+          'field' => 'content_id',
+          'left field' => $item['relation']['field'],
+          'handler' => 'views_handler_relationship',
+          'label' => t('Annotation: content'),
+          'extra' => array(
+            array(
+              'field' => 'content_type',
+              'value' => $key,
+            ),
+          ),
+        ),
+      );
+    }
+  }
 }
 
 /**
@@ -199,6 +233,9 @@ function annotation_api_views_handlers(){
       // filters
       'annotation_api_views_handler_filter_type' => array(
         'parent' => 'views_handler_filter_in_operator',
+      ),
+      'annotation_api_handler_filter_annotated' => array(
+        'parent' => 'views_handler_filter_boolean_operator',
       ),
     ),
   );

@@ -122,7 +122,7 @@ function annotation_cs_view_annotations($node) {
 
 
 /**
- *
+ * Implementation of hook_annotation_info_alter().
  */
 function annotation_cs_annotation_info_alter(&$info) {
   $info['content']['user']['form'] = 'annotation_cs_user_form';
@@ -392,10 +392,20 @@ function annotation_cs_preprocess_annotation_user(&$vars) {
 }
 
 /**
- * Remove Show/Hide button
+ * Remove Show/Hide button.
+ * Annotate content only once.
  */
 function annotation_cs_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'annotation_form' && $form['#annotation']->type == 'point') {
     unset($form['adder']);
+    // Only allow content be annotated once in scope.
+    $node = node_load($form['#annotation']->scope_id);
+    if (isset($node->annotation) && is_array($node->annotation)) {
+      foreach($node->annotation as $anno) {
+        if ($anno->content_type == 'user' && $anno->content_id) {
+          unset($form['content_id']['#options'][$anno->content_id]);
+        }
+      }
+    }
   }
 }
