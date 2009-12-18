@@ -1,0 +1,6 @@
+; $Id$
+name = Stats
+description = Module to provide automated statistic building, like sums, count on several tables
+core = 6.x
+version = dev
+package = "Stats"

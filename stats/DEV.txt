@@ -1,0 +1,57 @@
+General hook array info item:
+
+type =>
+name =>
+description =>
+source => array(
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+subject => array(
+  table =>
+  field =>
+  extra =>
+)
+derivation => array(
+  callback => array(
+    add =>
+    remove =>
+    remove_batch =>
+    rebuild_single =>
+    rebuild_batch =>
+  ),
+  [mode => ]
+)
+storage => array(
+  callback =>
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+derivation & storage => array(
+  callback => array(
+    add =>
+    remove =>
+    remove_batch =>
+    rebuild_single =>
+    rebuild_batch =>
+  ),
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+views data => array(
+  ...
+)
+
+
+Main functions
+
+stats_run()     type    subject     value     REACTION                                    CALLBACK
+                X       -           -         batch rebuild for type                      rebuild_batch
+                X       X           -         batch rebuild for subject in type           rebuild_single
+                X       X           X         simple add (with eventually initiate batch) add -> rebuild_single

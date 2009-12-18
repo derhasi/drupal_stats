@@ -1,0 +1,116 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *  this module provides general api functions to provide an automated stats
+ *  tool for other modules, for example to count and store values of a given
+ *  database table
+ */
+
+/**
+ * Updates or create stats for the given stats type, eventually specified with
+ * a single subject to update for, or a new value for the given subject, to
+ * avoid a maybe performance lack by
+ *
+ * @param $type
+ *  stats type - defined by module or stored in database
+ * @param $subject
+ *  (optional) specific subject to rebuild the value for a specific subject
+ * @param $new_value
+ *  (optional) value that was instantly added, needed to create data updates,
+ *  without doing a rebuild
+ * @param $return_values
+ *  (optional) default: FALSE, on TRUE this will return the derived values as
+ *  an array. Data won't be stored.
+ * @return
+ *  Returns FALSE if run was not successfull.
+ */
+function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = FALSE) {
+  $types = stats_types();
+  if (!isset($types[$type])) {
+    watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  $type = $types[$type];
+
+  $storage = isset($type['storage']['callback']);
+  switch (TRUE) {
+    case isset($new_value):
+      // Derive plus store
+      if (!$return_values && isset($type['derivation & storage']['callback']['add'])) {
+        return $type['derivation & storage']['callback']['add']($type, $subject, $new_value);
+      }
+      // Derive then store
+      elseif (($storage || $return_values) && isset($type['derivation']['callback']['add'])) {
+        $values = $type['derivation']['callback']['add']($type, $subject, $new_value);
+        if ($return_values) return $values;
+        return $type['storage']['callback']($type, $values, $subject, $new_value);
+      }
+      // else fallback on only subject level
+    case isset($subject):
+      // Derive plus store
+      if (!$return_values && isset($type['derivation & storage']['callback']['rebuild_single'])) {
+        return $type['derivation & storage']['callback']['rebuild_single']($type, $subject);
+      }
+      // Derive then store
+      elseif (($storage || $return_values) && isset($type['derivation']['callback']['rebuild_single'])) {
+        $values = $type['derivation']['callback']['rebuild_single']($type, $subject);
+        if ($return_values) return $values;
+        return $type['storage']['callback']($type, $values, $subject);
+      }
+      // else fallback on no-subject level
+    default:
+      // Derive plus store
+      if (!$return_values && isset($type['derivation & storage']['callback']['rebuild_batch'])) {
+        return $type['derivation & storage']['callback']['rebuild_batch']($type);
+      }
+      // Derive then store
+      elseif (($storage || $return_values) && isset($type['derivation']['callback']['rebuild_batch'])) {
+        $values = $type['derivation']['callback']['rebuild_batch']($type);
+        if ($return_values) return $values;
+        return $type['storage']['callback']($type, $values);
+      }
+  }
+  watchdog('stats', 'There could not be found a valid callback for type %type, subject $subject, new value %new_value (return value: %return_values)', array('%type' => $type['type'], '%subject' => $subject, '%new_value' => $new_value, '%return_values' => $return_values), WATCHDOG_ERROR);
+  return FALSE;
+}
+
+/**
+ * Queues the creation of stats runs.
+ *
+ * job_queue?
+ */
+function stats_queue_run($type, $subject = NULL, $new_value = NULL) {
+
+}
+
+/**
+ * Get all stats definitions.
+ * @return
+ *   Array of type definitions
+ */
+function stats_types() {
+  static $stats_types;
+  if (isset($stats_types)) return $stats_types;
+  // Avoids two types with same 'type' value.
+  $invoked = module_invoke_all('stats_info');
+  $stats_types = array();
+  foreach ($invoked as $key => $type) {
+    // Avoid missing 'type' definition
+    if (!isset($type['type'])) {
+      $type['type'] = $key;
+      $stats_types[$key] = $type;
+    }
+    else {
+      $stats_types[$type['type']] = $type;
+    }
+  }
+
+  // Let modules alter type definitions.
+  drupal_alter('stats', $stats_types);
+
+  // TODO: additional handling for building views data & default values.
+
+  return $stats_types;
+}

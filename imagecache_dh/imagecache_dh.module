@@ -1,0 +1,196 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *  Imagecache actions by derHasi - Johannes Haseitl
+ */
+
+/**
+ * Implementation of hook_imagecache_actions().
+ *
+ * Declare available actions, return help text about this filter.
+ */
+function imagecache_dh_imagecache_actions() {
+  $actions = array(
+    'imagecache_dh_mirror' => array(
+      'name' => t('DH Mirror action'),
+      'description' => t('Mirrors an image'),
+    ),
+    'imagecache_dh_mirror_and_duplicate' => array(
+      'name' => t('DH MirrorDuplicate action'),
+      'description' => t('MirrorDuplicates an image'),
+    ),
+  );
+  return $actions;
+}
+
+/**
+ * Implementation of hook_image().
+ */
+function imagecache_dh_mirror_image(&$image, $action) {
+  $size_x = imagesx($image->resource);
+  $size_y = imagesy($image->resource);
+  //$temp = imagecreatetruecolor($size_x, $size_y);
+  $temp = imageapi_gd_create_tmp($image, $size_x, $size_y);
+
+
+  if ($action['mode'] == 'v') {
+    //use this line to flip image vertically (upside-down)
+    $x = imagecopyresampled($temp, $image->resource, 0, 0, 0, ($size_y-1), $size_x, $size_y, $size_x, 0-$size_y);
+  }
+  else {
+    $x = imagecopyresampled($temp, $image->resource, 0, 0, ($size_x-1), 0, $size_x, $size_y, 0-$size_x, $size_y);
+  }
+
+  if ($x) {
+    $image->resource = $temp;
+  }
+  return $image;
+}
+
+/**
+ * Implementation of hook_image().
+ */
+function imagecache_dh_mirror_and_duplicate_image(&$image, $action) {
+  $alpha_from = $action['alpha_from'];
+  $alpha_to = $action['alpha_to'];
+  $gap = $action['gap'];
+  $shrink = $action['shrink'];
+  $height = $action['height'];
+  $size_x = imagesx($image->resource);
+  $size_y = imagesy($image->resource);
+  //$temp = imagecreatetruecolor($size_x, $size_y);
+  $img_temp1_resource = imageapi_gd_create_tmp($image, $size_x, $size_y * (1 + $height / 100));
+  $img_temp2_resource = imageapi_gd_create_tmp($image, $size_x, $size_y * ($height / 100));
+
+  $r1 = imagecopyresampled($img_temp1_resource, $image->resource, 0, 0, 0, 0, $size_x, $size_y, $size_x, $size_y);
+  $r2 = imagecopyresampled($img_temp2_resource, $image->resource, 0, 0, 0, ($size_y-1), $size_x, $size_y, $size_x, 0 - $size_y * (100 / $shrink));
+
+  module_load_include('inc', 'imagecache_coloractions', 'watermark');
+  module_load_include('inc', 'imagecache_dh', 'dh_watermark.class');
+  //$watermark = new watermark();
+  $watermark = new dh_watermark();
+  $image->resource = $watermark->create_watermark($img_temp1_resource, $img_temp2_resource, 0, $size_y + $gap, $alpha_from, $alpha_to);
+
+  return $image;
+
+  //-------------
+
+  // png alpha
+  module_load_include('inc', 'imagecache_coloractions', 'transparency');
+  //$i2 = (object) array('resource' => $img_temp2_resource);
+  //png_color2alpha($i2, '#333333');
+  //$image->resource = $watermark->create_watermark($img_temp1_resource, $i2->resource, 0, $size_y, 100);
+  imagecopyresampled($img_temp1_resource, $img_temp2_resource, 0, $size_y, 0, 0, $size_x, $size_y / 2, $size_x, $size_y / 2);
+  $image->resource = $img_temp1_resource;
+  imagecache_dh_png_color2alpha($image, '#888888', 0, $size_y, $size_x, $size_y * 1.5);
+
+  //imagedestroy($layer->resource);
+
+  return $image;
+}
+
+/**
+ * Form implementation for imagecache action form.
+ */
+function imagecache_dh_mirror_form($action) {
+  if ( empty($action) ) { $action = array('mode' => 'h'); }
+  $form = array(
+    'mode' => array(
+      '#type' => 'select',
+      '#title' => 'Mirror mode',
+      '#default_value' => $action['mode'],
+      '#options' => array(
+        'h' => t('Horizontally'),
+        'v' => t('Vertically'),
+      ),
+    ),
+  );
+  return $form;
+}
+
+function imagecache_dh_mirror_and_duplicate_form($action) {
+  $form = array();
+  $form['alpha_from'] = array(
+    '#title' => t('Alpha from'),
+    '#type' => 'select',
+    '#options' => range(0, 100),
+    '#default_value' => $action['alpha_from'],
+    '#suffix' => '%',
+  );
+  $form['alpha_to'] = array(
+    '#title' => t('Alpha to'),
+    '#type' => 'select',
+    '#options' => range(0, 100),
+    '#default_value' => $action['alpha_to'],
+    '#suffix' => '%',
+  );
+  $form['gap'] = array(
+    '#title' => t('Gap'),
+    '#type' => 'select',
+    '#description' => 'Gap in pixel between original and mirrored',
+    '#options' => range(0, 100),
+    '#default_value' => $action['gap'],
+    '#suffix' => 'px',
+  );
+  $form['height'] = array(
+    '#title' => t('Height'),
+    '#type' => 'select',
+    '#description' => 'Height of the mirrored image canvas',
+    '#options' => range(0, 100),
+    '#default_value' => $action['height'],
+    '#suffix' => '%',
+  );
+  $form['shrink'] = array(
+    '#title' => t('Shrink'),
+    '#type' => 'select',
+    '#description' => 'Size the mirrored image will shrink to',
+    '#options' => range(0, 100),
+    '#default_value' => $action['shrink'],
+    '#suffix' => '%',
+  );
+  return $form;
+}
+
+/**
+ * Modification of png_color2alpha() im imagecache_actions transparency.inc
+ */
+function imagecache_dh_png_color2alpha(&$image, $color, $width_from = 0, $height_from = 0, $width_to = NULL, $height_to = NULL) {
+  //$image->info['extension'] = 'png';
+  //$image->info['mime_type'] = 'image/png';
+  $info = $image->info;
+  if (!$info) { return FALSE; }
+
+  $im1 = $image->resource;
+
+  imagesavealpha( $im1, TRUE);
+  imagealphablending($im1, FALSE);
+
+  if ($color) $background = hex_to_rgb($color);
+  $width = (isset($width_to)) ? $width_to : imagesx($im1);
+  $height = (isset($height_to)) ? $height_to : imagesy($im1);
+  for ($i = $height_from; $i < $height; $i++) { //this loop traverses each row in the image
+    for ($j = $width_from; $j < $width; $j++) { //this loop traverses each pixel of each row
+
+      // Get the color & alpha info of the current pixel
+      $retrieved_color = imagecolorat($im1, $j, $i); // an index
+      $rgba_array = imagecolorsforindex($im1, $retrieved_color);
+
+      // Calculate the total shade value of this pixel
+      $lightness = ( $rgba_array['red'] + $rgba_array['green'] + $rgba_array['blue'] ) /3;
+      // Need to flip the numbers around before doing maths.
+      #$opacity = 1-($rgba_array['alpha']/127);
+      #$darkness = 1-($lightness/256); // 0 is white, 1 is black
+      #$visibility = $darkness * $opacity;
+      #$alpha = (1-$visibility) * 127;
+      # =>
+      $alpha = (1- ((1-($lightness/256)) * (1-($rgba_array['alpha']/127)))) * 127;
+      if (!$color) $background=$rgba_array;
+      //paint the pixel
+      $color_to_paint = imagecolorallocatealpha($image->resource, $background['red'], $background['green'], $background['blue'], $alpha);
+      imagesetpixel($image->resource, $j, $i, $color_to_paint);
+    }
+  }
+  return TRUE;
+}
