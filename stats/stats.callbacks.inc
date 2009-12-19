@@ -38,12 +38,14 @@ function stats_callback_storage_load($type, $subject = NULL, $new_value = NULL) 
   // Return an array for valid queries.
   $return = array();
   while ($line = db_fetch_array($res)) {
-    $return[$line[$col_subj]] = array(
-      'subject' => $line[$col_subj],
-      'type' => $type['type'],
-      'value' => $line[$col_val],
-      'data' => $line,
-    );
+    if ($line[$type['storage']['type field']] == $type['type']) {
+      $return[$line[$col_subj]] = array(
+        'subject' => $line[$col_subj],
+        'type' => $type['type'],
+        'value' => $line[$col_val],
+        'data' => $line,
+      );
+    }
   }
   return $return;
 

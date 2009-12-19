@@ -130,9 +130,68 @@ function stats_types() {
   }
 
   // TODO: additional handling for building views data & default values.
-
+  _stats_info_alter($stats_types);
   // Let modules alter type definitions.
   drupal_alter('stats_info', $stats_types);
 
   return $stats_types;
+}
+
+/**
+ * Default alteration for adding views data and default values.
+ * @param $stats_types
+ *  (by reference) array of stats types
+ */
+function _stats_info_alter(&$stats_types) {
+  foreach ($stats_types as $key => $type) {
+    if (!isset($type['views data'])) {
+      $table = $type['storage']['table'];
+      $col_subject = $type['storage']['subject field'];
+      $col_value = $type['storage']['value field'];
+      $col_type = $type['storage']['type field'];
+
+      $base_table = $type['subject']['table'];
+      $base_field = $type['subject']['field'];
+
+      // TODO: more generic views data build, that also recognizes existing tables
+      $type['views data'] = array(
+        $table => array(
+          'table' => array(
+            'group' => t('Stats'),
+            'join' => array(
+              $base_table => array(
+                'left_table' => $base_table,
+                'left_field' => $base_field,
+                'field' => $col_subject,
+                'extra' => array(
+                  0 => array(
+                    'field' => $col_type,
+                    'value' => $type['type'],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          $col_value => array(
+            'title' => t('Stats %stats_type_name value', array('&stats_type_name' => $type['name'])),
+            'help' => t('Value stats type %stats_type_name', array('&stats_type_name' => $type['name'])),
+            'field' => array(
+              'handler' => 'views_handler_field',
+              'click sortable' => TRUE,
+            ),
+            'sort' => array(
+              'handler' => 'views_handler_sort',
+            ),
+            'filter' => array(
+              'handler' => 'views_handler_filter_string',
+            ),
+            'argument' => array(
+              'handler' => 'views_handler_argument_string',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
 }

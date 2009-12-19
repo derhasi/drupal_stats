@@ -45,9 +45,14 @@ function hook_stats_info() {
         'table' => 'stats_int_int',
         'subject field' => 'subject',
         'value field' => 'value',
+        'type field' => 'type',
         //'extra' => ,
       ),
       //'derivation & storage' => array(),
+      // will be built automatically
+      'views data' => array(
+        'stats_int_int' => 
+      )
     )
   );
   return $return;
