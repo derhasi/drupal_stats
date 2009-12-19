@@ -34,43 +34,60 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
   }
   $type = $types[$type];
 
-  $storage = isset($type['storage']['callback']);
-  switch (TRUE) {
-    case isset($new_value):
-      // Derive plus store
-      if (!$return_values && isset($type['derivation & storage']['callback']['add'])) {
-        return $type['derivation & storage']['callback']['add']($type, $subject, $new_value);
-      }
-      // Derive then store
-      elseif (($storage || $return_values) && isset($type['derivation']['callback']['add'])) {
-        $values = $type['derivation']['callback']['add']($type, $subject, $new_value);
-        if ($return_values) return $values;
-        return $type['storage']['callback']($type, $values, $subject, $new_value);
-      }
-      // else fallback on only subject level
-    case isset($subject):
-      // Derive plus store
-      if (!$return_values && isset($type['derivation & storage']['callback']['rebuild_single'])) {
-        return $type['derivation & storage']['callback']['rebuild_single']($type, $subject);
-      }
-      // Derive then store
-      elseif (($storage || $return_values) && isset($type['derivation']['callback']['rebuild_single'])) {
-        $values = $type['derivation']['callback']['rebuild_single']($type, $subject);
-        if ($return_values) return $values;
-        return $type['storage']['callback']($type, $values, $subject);
-      }
-      // else fallback on no-subject level
-    default:
-      // Derive plus store
-      if (!$return_values && isset($type['derivation & storage']['callback']['rebuild_batch'])) {
-        return $type['derivation & storage']['callback']['rebuild_batch']($type);
-      }
-      // Derive then store
-      elseif (($storage || $return_values) && isset($type['derivation']['callback']['rebuild_batch'])) {
-        $values = $type['derivation']['callback']['rebuild_batch']($type);
-        if ($return_values) return $values;
-        return $type['storage']['callback']($type, $values);
-      }
+  // Callback definitions
+  $callback_load = $type['storage']['callback']['load'];
+  $callback_write = $type['storage']['callback']['write'];
+  $callback_derivation = $type['derivation']['callback'];
+  $callback_d_and_s = $type['derivation & storage']['callback'];
+
+  // TYPE + SUBJECT + NEW_VALUE
+  if (isset($new_value)) {
+    // Derive plus store
+    if (!$return_values && isset($callback_d_and_s['add'])) {
+      return $callback_d_and_s['add']($type, $subject, $new_value);
+    }
+    // Derive then store
+    elseif ($callback_load && ($callback_write || $return_values) && isset($callback_derivation['add'])) {
+      // Get old values
+      $old_values = $callback_load($type, $subject, $new_value);
+      // Derive new values
+      $values = $callback_derivation['add']($type, $old_values, $subject, $new_value);
+      if ($return_values) return $values;
+      return $callback_write($type, $values, $subject, $new_value);
+    }
+  }
+
+  // TYPE + SUBJECT: Fall back on only subject level
+  if (isset($subject)) {
+    // Derive plus store
+    if (!$return_values && isset($callback_d_and_s['rebuild_single'])) {
+      return $callback_d_and_s['rebuild_single']($type, $subject);
+    }
+    // Derive then store
+    elseif (($storage || $return_values) && isset($callback_derivation['rebuild_single'])) {
+      // Get old values
+      $old_values = $callback_load($type, $subject);
+      // Derive new values
+      $values = $callback_derivation['rebuild_single']($type, $old_values, $subject);
+      if ($return_values) return $values;
+      return $callback_write($type, $values, $subject);
+    }
+  }
+
+  // TYPE: fall back on no-subject level
+
+  // Derive plus store
+  if (!$return_values && isset($callback_d_and_s['rebuild_batch'])) {
+    return $callback_d_and_s['rebuild_batch']($type);
+  }
+  // Derive then store
+  elseif (($storage || $return_values) && isset($callback_derivation['rebuild_batch'])) {
+    // Get old values
+    $old_values = $callback_load($type);
+    // Derive new values
+    $values = $callback_derivation['rebuild_batch']($type, $old_values);
+    if ($return_values) return $values;
+    return $callback_write($type, $values);
   }
   watchdog('stats', 'There could not be found a valid callback for type %type, subject $subject, new value %new_value (return value: %return_values)', array('%type' => $type['type'], '%subject' => $subject, '%new_value' => $new_value, '%return_values' => $return_values), WATCHDOG_ERROR);
   return FALSE;
