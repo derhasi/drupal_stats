@@ -28,8 +28,14 @@
  */
 function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = FALSE) {
   $types = stats_types();
+  // Check definition
   if (!isset($types[$type])) {
     watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  // Check active state
+  elseif (!$types[$type]['active']) {
+    watchdog('stats', 'Stats type %type is not activated.', array('%type' => $type), WATCHDOG_WARNING);
     return FALSE;
   }
   $type = $types[$type];
@@ -75,17 +81,16 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
   }
 
   // TYPE: fall back on no-subject level
-
   // Derive plus store
-  if (!$return_values && isset($callback_d_and_s['rebuild_batch'])) {
-    return $callback_d_and_s['rebuild_batch']($type);
+  if (!$return_values && isset($callback_d_and_s['rebuild_all'])) {
+    return $callback_d_and_s['rebuild_all']($type);
   }
   // Derive then store
-  elseif (($storage || $return_values) && isset($callback_derivation['rebuild_batch'])) {
+  elseif (($storage || $return_values) && isset($callback_derivation['rebuild_all'])) {
     // Get old values
     $old_values = $callback_load($type);
     // Derive new values
-    $values = $callback_derivation['rebuild_batch']($type, $old_values);
+    $values = $callback_derivation['rebuild_all']($type, $old_values);
     if ($return_values) return $values;
     return $callback_write($type, $values);
   }
@@ -124,10 +129,10 @@ function stats_types() {
     }
   }
 
-  // Let modules alter type definitions.
-  drupal_alter('stats', $stats_types);
-
   // TODO: additional handling for building views data & default values.
+
+  // Let modules alter type definitions.
+  drupal_alter('stats_info', $stats_types);
 
   return $stats_types;
 }

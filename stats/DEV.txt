@@ -18,9 +18,9 @@ derivation => array(
   callback => array(
     add =>
     remove =>
-    remove_batch =>
+    remove_all =>
     rebuild_single =>
-    rebuild_batch =>
+    rebuild_all =>
   ),
   [mode => ]
 )
@@ -37,7 +37,7 @@ derivation & storage => array(
     remove =>
     remove_batch =>
     rebuild_single =>
-    rebuild_batch =>
+    rebuild_all =>
   ),
   table =>
   subject field =>
@@ -55,3 +55,19 @@ stats_run()     type    subject     value     REACTION                          
                 X       -           -         batch rebuild for type                      rebuild_batch
                 X       X           -         batch rebuild for subject in type           rebuild_single
                 X       X           X         simple add (with eventually initiate batch) add -> rebuild_single
+
+
+Structure of callback functions
+
+mode      op              example function                          arg1    arg2    arg3    arg4
+--------------------------------------------------------------------------------------------------------
+D         add             stats_callback_derivation_add             type    ovalues subject new_value
+D         rebuild_single  stats_callback_derivation_rebuild_single  type    ovalues subject
+D         rebuild_all     stats_callback_derivation_rebuild_batch   type    ovalues
+
+S         load            stats_callback_storage_load               type    (subj)
+S         load            stats_callback_storage_write              type    values  (subj)
+
+D & S     add             stats_callback_dands_add             type    subject new_value
+D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
+D & S     rebuild_all     stats_callback_dands_rebuild_batch   type

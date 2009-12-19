@@ -32,8 +32,9 @@ function hook_stats_info() {
           //'remove' => 'stats_callback_derivation_remove',
           //'remove_batch' => 'stats_callback_derivation_remove_batch',
           'rebuild_single' => 'stats_callback_derivation_rebuild_single',
-          'rebuild_batch' => 'stats_callback_derivation_rebuild_batch',
+          'rebuild_all' => 'stats_callback_derivation_rebuild_all',
         ),
+        'skip_load' => array('rebuild_single', 'rebuild_all'),
         'mode' => 'count',
       ),
       'storage' => array(
