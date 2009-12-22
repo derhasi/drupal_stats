@@ -1,0 +1,6 @@
+; $Id$
+name = Stats Example
+description = An example module for counting nodes per term via stats.
+core = 6.x
+version = dev
+package = "Stats"

@@ -144,6 +144,18 @@ function stats_types() {
  */
 function _stats_info_alter(&$stats_types) {
   foreach ($stats_types as $key => $type) {
+
+    // Set default derivation callbacks
+    if (empty($type['derivation']['callback'])) {
+      $type['derivation']['callback'] = array(
+        'add' => 'stats_callback_derivation_add',
+        'rebuild_single' => 'stats_callback_derivation_rebuild_single',
+        'rebuild_all' => 'stats_callback_derivation_rebuild_all',
+        'skip_load' => array('rebuild_single', 'rebuild_all'),
+      );
+    }
+
+    // Set views data, if no is set
     if (!isset($type['views data'])) {
       $table = $type['storage']['table'];
       $col_subject = $type['storage']['subject field'];
@@ -153,45 +165,64 @@ function _stats_info_alter(&$stats_types) {
       $base_table = $type['subject']['table'];
       $base_field = $type['subject']['field'];
 
+      $type_id = $type['type'];
+
       // TODO: more generic views data build, that also recognizes existing tables
-      $type['views data'] = array(
-        $table => array(
-          'table' => array(
-            'group' => t('Stats'),
-            'join' => array(
-              $base_table => array(
-                'left_table' => $base_table,
-                'left_field' => $base_field,
-                'field' => $col_subject,
-                'extra' => array(
-                  0 => array(
-                    'field' => $col_type,
-                    'value' => $type['type'],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          $col_value => array(
-            'title' => t('Stats %stats_type_name value', array('&stats_type_name' => $type['name'])),
-            'help' => t('Value stats type %stats_type_name', array('&stats_type_name' => $type['name'])),
-            'field' => array(
-              'handler' => 'views_handler_field',
-              'click sortable' => TRUE,
-            ),
-            'sort' => array(
-              'handler' => 'views_handler_sort',
-            ),
-            'filter' => array(
-              'handler' => 'views_handler_filter_string',
-            ),
-            'argument' => array(
-              'handler' => 'views_handler_argument_string',
+      // Define table if it is not allready declared.
+      if (!$type['storage']['views table declared']) {
+        $stats_types[$key]['views data'][$table]['table'] = array(
+          'group' => t('Stats'),
+        );
+      }
+
+      // Relation
+      $stats_types[$key]['views data alter'][$base_table]['stats_'. $type_id] = array(
+        'real field' => $base_field,
+        'title' => t('Stats: %base to %type', array('%base' => $base_table, '%type' => $type_id)),
+        'help' => $item['help'],
+        'relationship' => array(
+          'base' => $table,
+          'field' => $col_subject,
+          'left field' => $base_field,
+          'handler' => 'views_handler_relationship',
+          'label' => t('Stats: %base to %type', array('%base' => $base_table, '%type' => $type_id)),
+          'extra' => array(
+            array(
+              'field' => $col_type,
+              'value' => $type_id,
             ),
           ),
         ),
       );
+
+      // Define field, if it is not allready declared.
+      if (!$type['storage']['views field declared']) {
+        $stats_types[$key]['views data'][$table][$col_value] = array(
+          'title' => t('Stats %stats_type_name value', array('%stats_type_name' => $type['name'])),
+          'help' => t('Value stats type %stats_type_name', array('%stats_type_name' => $type['name'])),
+          'field' => array(
+            'handler' => 'views_handler_field',
+            'click sortable' => TRUE,
+          ),
+          'sort' => array(
+            'handler' => 'views_handler_sort',
+          ),
+          'filter' => array(
+            'handler' => 'views_handler_filter_string',
+          ),
+          'argument' => array(
+            'handler' => 'views_handler_argument_string',
+          ),
+        );
+      }
     }
   }
+}
 
+
+function stats_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'stats'),
+  );
 }

@@ -2,13 +2,13 @@
 
 /**
  * @file
- *  example hook implemantions for stats.module
+ *  example implemantion for stats.module
  */
 
 /**
  * Return some stats info types
  */
-function hook_stats_info() {
+function stats_example_stats_info() {
   $return = array(
     'term_nodecount' => array(
       'type' => 'term_nodecount',
@@ -27,14 +27,6 @@ function hook_stats_info() {
         // 'extra' =>,
       ),
       'derivation' => array(
-        'callback' => array(
-          'add' => 'stats_callback_derivation_add',
-          //'remove' => 'stats_callback_derivation_remove',
-          //'remove_batch' => 'stats_callback_derivation_remove_batch',
-          'rebuild_single' => 'stats_callback_derivation_rebuild_single',
-          'rebuild_all' => 'stats_callback_derivation_rebuild_all',
-          'skip_load' => array('rebuild_single', 'rebuild_all'),
-        ),
         'mode' => 'count',
       ),
       'storage' => array(
@@ -47,16 +39,8 @@ function hook_stats_info() {
         'value field' => 'value',
         'type field' => 'type',
         //'extra' => ,
-        'views table declared' => TRUE, // FALSE default, TRUE for allready declared as table for views
+        'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
         'views field declared' => FALSE, // FALSE default,
-      ),
-      //'derivation & storage' => array(),
-      // will be built automatically and/or can be altered via hook_stats_info_alter().
-      'views data' => array(
-        // ...
-      ),
-      'views data alter' => array(
-        // ...
       ),
     )
   );
