@@ -182,8 +182,10 @@ function _stats_info_alter(&$stats_types) {
         'help' => $item['help'],
         'relationship' => array(
           'base' => $table,
-          'field' => $col_subject,
-          'left field' => $base_field,
+          //'field' => $col_subject,
+          'relationship field' => $base_field,
+          'base field' => $col_subject,
+          //'left field' => $base_field,
           'handler' => 'views_handler_relationship',
           'label' => t('Stats: %base to %type', array('%base' => $base_table, '%type' => $type_id)),
           'extra' => array(

@@ -71,3 +71,4 @@ S         load            stats_callback_storage_write              type    valu
 D & S     add             stats_callback_dands_add             type    subject new_value
 D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
 D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
+
