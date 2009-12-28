@@ -54,8 +54,15 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
     }
     // Derive then store
     elseif ($callback_load && ($callback_write || $return_values) && isset($callback_derivation['add'])) {
-      // Get old values
-      $old_values = $callback_load($type, $subject, $new_value);
+      // Skip load
+      if (in_array('add', $type['derivation']['skip load'])) {
+        $old_values = NULL;
+      }
+      else {
+        // Get old values
+        $old_values = $callback_load($type, $subject, $new_value);
+      }
+
       // Derive new values
       $values = $callback_derivation['add']($type, $old_values, $subject, $new_value);
       if ($return_values) return $values;
@@ -66,15 +73,21 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
   // TYPE + SUBJECT: Fall back on only subject level
   if (isset($subject)) {
     // Derive plus store
-    if (!$return_values && isset($callback_d_and_s['rebuild_single'])) {
-      return $callback_d_and_s['rebuild_single']($type, $subject);
+    if (!$return_values && isset($callback_d_and_s['rebuild single'])) {
+      return $callback_d_and_s['rebuild single']($type, $subject);
     }
     // Derive then store
-    elseif (($storage || $return_values) && isset($callback_derivation['rebuild_single'])) {
-      // Get old values
-      $old_values = $callback_load($type, $subject);
+    elseif (($storage || $return_values) && isset($callback_derivation['rebuild single'])) {
+      // Skip load
+      if (in_array('rebuild single', $type['derivation']['skip load'])) {
+        $old_values = NULL;
+      }
+      else {
+        // Get old values
+        $old_values = $callback_load($type, $subject);
+      }
       // Derive new values
-      $values = $callback_derivation['rebuild_single']($type, $old_values, $subject);
+      $values = $callback_derivation['rebuild single']($type, $old_values, $subject);
       if ($return_values) return $values;
       return $callback_write($type, $values, $subject);
     }
@@ -82,15 +95,21 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
 
   // TYPE: fall back on no-subject level
   // Derive plus store
-  if (!$return_values && isset($callback_d_and_s['rebuild_all'])) {
-    return $callback_d_and_s['rebuild_all']($type);
+  if (!$return_values && isset($callback_d_and_s['rebuild all'])) {
+    return $callback_d_and_s['rebuild all']($type);
   }
   // Derive then store
-  elseif (($storage || $return_values) && isset($callback_derivation['rebuild_all'])) {
-    // Get old values
-    $old_values = $callback_load($type);
+  elseif (($storage || $return_values) && isset($callback_derivation['rebuild all'])) {
+    // Skip load
+    if (in_array('rebuild all', $type['derivation']['skip load'])) {
+      $old_values = NULL;
+    }
+    else {
+      // Get old values
+      $old_values = $callback_load($type);
+    }
     // Derive new values
-    $values = $callback_derivation['rebuild_all']($type, $old_values);
+    $values = $callback_derivation['rebuild all']($type, $old_values);
     if ($return_values) return $values;
     return $callback_write($type, $values);
   }
@@ -101,9 +120,25 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
 /**
  * Queues the creation of stats runs.
  *
- * job_queue?
+ * drupal_queue / job_queue ?
  */
 function stats_queue_run($type, $subject = NULL, $new_value = NULL) {
+
+}
+
+/**
+ * Retrieve statistic value for the given type and optionally subject
+ * @param $type
+ *   type of the stat
+ * @param $subject
+ *   id of the subject to return value(s) for
+ * @param $only_value
+ *   will return only the value of value column if set to TRUE
+ *   else will return the whole stat array (subject, type, value, data, ...)
+ * @return
+ *  array of stats value arrays 
+ */
+function stats_load($type, $subject = NULL, $only_value = TRUE) {
 
 }
 
@@ -149,9 +184,9 @@ function _stats_info_alter(&$stats_types) {
     if (empty($type['derivation']['callback'])) {
       $type['derivation']['callback'] = array(
         'add' => 'stats_callback_derivation_add',
-        'rebuild_single' => 'stats_callback_derivation_rebuild_single',
-        'rebuild_all' => 'stats_callback_derivation_rebuild_all',
-        'skip_load' => array('rebuild_single', 'rebuild_all'),
+        'rebuild single' => 'stats_callback_derivation_rebuild_single',
+        'rebuild all' => 'stats_callback_derivation_rebuild_all',
+        'skip load' => array('rebuild single', 'rebuild all'),
       );
     }
 
@@ -178,7 +213,7 @@ function _stats_info_alter(&$stats_types) {
       // Relation
       $stats_types[$key]['views data alter'][$base_table]['stats_'. $type_id] = array(
         'real field' => $base_field,
-        'title' => t('Stats: %base to %type', array('%base' => $base_table, '%type' => $type_id)),
+        'title' => t('Stats: @base to @type', array('@base' => $base_table, '@type' => $type_id)),
         'help' => $item['help'],
         'relationship' => array(
           'base' => $table,
@@ -187,7 +222,7 @@ function _stats_info_alter(&$stats_types) {
           'base field' => $col_subject,
           //'left field' => $base_field,
           'handler' => 'views_handler_relationship',
-          'label' => t('Stats: %base to %type', array('%base' => $base_table, '%type' => $type_id)),
+          'label' => t('Stats: @base to @type', array('@base' => $base_table, '@type' => $type_id)),
           'extra' => array(
             array(
               'field' => $col_type,
@@ -200,8 +235,8 @@ function _stats_info_alter(&$stats_types) {
       // Define field, if it is not allready declared.
       if (!$type['storage']['views field declared']) {
         $stats_types[$key]['views data'][$table][$col_value] = array(
-          'title' => t('Stats %stats_type_name value', array('%stats_type_name' => $type['name'])),
-          'help' => t('Value stats type %stats_type_name', array('%stats_type_name' => $type['name'])),
+          'title' => t('Stats @stats_type_name value', array('@stats_type_name' => $type['name'])),
+          'help' => t('Value stats type @stats_type_name', array('@stats_type_name' => $type['name'])),
           'field' => array(
             'handler' => 'views_handler_field',
             'click sortable' => TRUE,

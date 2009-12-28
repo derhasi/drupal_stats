@@ -6,6 +6,13 @@
  */
 
 /**
+ * @addtogroup hooks
+ * @{
+ */
+
+/**
+ * Implementation of hook_stats_info().
+ *
  * Return some stats info types
  */
 function hook_stats_info() {
@@ -31,9 +38,9 @@ function hook_stats_info() {
           'add' => 'stats_callback_derivation_add',
           //'remove' => 'stats_callback_derivation_remove',
           //'remove_batch' => 'stats_callback_derivation_remove_batch',
-          'rebuild_single' => 'stats_callback_derivation_rebuild_single',
-          'rebuild_all' => 'stats_callback_derivation_rebuild_all',
-          'skip_load' => array('rebuild_single', 'rebuild_all'),
+          'rebuild single' => 'stats_callback_derivation_rebuild_single',
+          'rebuild all' => 'stats_callback_derivation_rebuild_all',
+          'skip load' => array('rebuild_single', 'rebuild_all'),
         ),
         'mode' => 'count',
       ),
@@ -51,7 +58,8 @@ function hook_stats_info() {
         'views field declared' => FALSE, // FALSE default,
       ),
       //'derivation & storage' => array(),
-      // will be built automatically and/or can be altered via hook_stats_info_alter().
+      // views data will be built automatically and/or can be altered via
+      // hook_stats_info_alter().
       'views data' => array(
         // ...
       ),
@@ -61,4 +69,11 @@ function hook_stats_info() {
     )
   );
   return $return;
+}
+
+/**
+ * Implementation of hook_stats_info_alter().
+ */
+function hook_stats_info_alter(&$info) {
+
 }

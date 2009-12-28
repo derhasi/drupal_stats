@@ -1,4 +1,5 @@
 General hook array info item:
+@see hooks.php
 
 type =>
 name =>
@@ -72,3 +73,23 @@ D & S     add             stats_callback_dands_add             type    subject n
 D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
 D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
 
+
+Storage TABLE
+-------------
+DEFAULT implementation: stats_callback_storage_load / stats_callback_storage_write
+
+column subject    the column the subject-id (either numeric or string) will be stored
+column type       (optional) if not defined, stats API assumes that the table is only used for this type or
+                  different datasets are distinguished by extra parameters
+column value      the column the value will be stored
+
+for these callbacks it's assumed that there is only one line
+* for each subject-type combination, if subject column and type column are a combined unique column
+* for each subject, when subject is a primary key or single unique key
+
+the whole line will be stored in the stat value array as key 'data'
+
+----
+
+other implementations may add other columns:
+example: column timestamp - could implement a versioned like storage, e.g. for viewing development of stats)
