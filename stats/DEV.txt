@@ -1,5 +1,5 @@
 General hook array info item:
-@see hooks.php
+@see hooks.php - there is the actual implemented structure
 
 type =>
 name =>
@@ -87,7 +87,7 @@ for these callbacks it's assumed that there is only one line
 * for each subject-type combination, if subject column and type column are a combined unique column
 * for each subject, when subject is a primary key or single unique key
 
-the whole line will be stored in the stat value array as key 'data'
+the whole line will be stored in the stats value array as key 'data'
 
 ----
 

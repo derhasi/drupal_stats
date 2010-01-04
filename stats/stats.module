@@ -8,10 +8,12 @@
  *  database table
  */
 
+require_once 'stats.callbacks.inc';
+
 /**
- * Updates or create stats for the given stats type, eventually specified with
+ * Updates or creates stats for the given stats type, eventually specified with
  * a single subject to update for, or a new value for the given subject, to
- * avoid a maybe performance lack by
+ * avoid a maybe performance lack
  *
  * @param $type
  *  stats type - defined by module or stored in database
@@ -27,18 +29,26 @@
  *  Returns FALSE if run was not successfull.
  */
 function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = FALSE) {
-  $types = stats_types();
+  $type = stats_type($type);
   // Check definition
-  if (!isset($types[$type])) {
+  if (!is_array($type)) {
     watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
     return FALSE;
   }
   // Check active state
-  elseif (!$types[$type]['active']) {
+  elseif (!$type['active']) {
     watchdog('stats', 'Stats type %type is not activated.', array('%type' => $type), WATCHDOG_WARNING);
     return FALSE;
   }
-  $type = $types[$type];
+
+  // Load type's modulename.stats.inc
+  if (isset($type['module'])) {
+    module_load_include('inc', $type['module'], $type['module'] .'.stats');
+  }
+  // Load defined additional file
+  if (isset($type['file']) && is_file('./'. $type['file'])) {
+    require_once './'. $type['file'];
+  }
 
   // Callback definitions
   $callback_load = $type['storage']['callback']['load'];
@@ -120,10 +130,21 @@ function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = F
 /**
  * Queues the creation of stats runs.
  *
- * drupal_queue / job_queue ?
+ * Functionality is driven by job_queue.module.
+ * @param $type
+ * @param $subject
+ * @param $new_value
+ * @return
  */
-function stats_queue_run($type, $subject = NULL, $new_value = NULL) {
-
+function stats_queue($type, $subject = NULL, $new_value = NULL) {
+  // Run via job queue.
+  if (module_exists('job_queue')) {
+    job_queue_add('stats_run', 'Run stats for type '. $type, array($type, $subject, $new_value), '', !isset($new_value));
+    return TRUE;
+  }
+  else {
+    stats_run($type, $subject, $new_value);
+  }
 }
 
 /**
@@ -136,10 +157,15 @@ function stats_queue_run($type, $subject = NULL, $new_value = NULL) {
  *   will return only the value of value column if set to TRUE
  *   else will return the whole stat array (subject, type, value, data, ...)
  * @return
- *  array of stats value arrays 
+ *  array of stats value arrays
  */
 function stats_load($type, $subject = NULL, $only_value = TRUE) {
-
+  $type = stats_type($type);
+  if ($type) {
+    $return = call_user_func($type['storage']['load'], $type, $subject);
+    return $return;
+  }
+  return FALSE;
 }
 
 /**
@@ -150,26 +176,49 @@ function stats_load($type, $subject = NULL, $only_value = TRUE) {
 function stats_types() {
   static $stats_types;
   if (isset($stats_types)) return $stats_types;
-  // Avoids two types with same 'type' value.
-  $invoked = module_invoke_all('stats_info');
+
+  $modules = module_implements('stats_info');
   $stats_types = array();
-  foreach ($invoked as $key => $type) {
-    // Avoid missing 'type' definition
-    if (!isset($type['type'])) {
-      $type['type'] = $key;
-      $stats_types[$key] = $type;
-    }
-    else {
-      $stats_types[$type['type']] = $type;
+  foreach ($modules as $module) {
+    $invoked = module_invoke($module, 'stats_info');
+    foreach ($invoked as $key => $type) {
+      // Avoid missing module - stats run tries to include modulename.stats.inc
+      if (!isset($type['module'])) {
+        $type['module'] = $module;
+      }
+      // Avoid missing 'type' definition
+      if (!isset($type['type'])) {
+        $type['type'] = $key;
+        $stats_types[$key] = $type;
+      }
+      else {
+        $stats_types[$type['type']] = $type;
+      }
     }
   }
 
-  // TODO: additional handling for building views data & default values.
+
+  // additional handling for building views data & default values.
   _stats_info_alter($stats_types);
   // Let modules alter type definitions.
   drupal_alter('stats_info', $stats_types);
 
   return $stats_types;
+}
+
+/**
+ * Return a single stats type info.
+ * @param $type
+ *   type id
+ * @return
+ *   stats type info array
+ */
+function stats_type($type) {
+  $stats_types = stats_types();
+  if (isset($stats_types[$type])) {
+    return $stats_types[$type];
+  }
+  return FALSE;
 }
 
 /**
@@ -256,7 +305,9 @@ function _stats_info_alter(&$stats_types) {
   }
 }
 
-
+/**
+ * Implementation of hook_views_api().
+ */
 function stats_views_api() {
   return array(
     'api' => 2,

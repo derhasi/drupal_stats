@@ -11,17 +11,19 @@
  */
 
 /**
- * Implementation of hook_stats_info().
+ * Define Stats types.
  *
+ * @see DEV.txt
  * Return some stats info types
  */
 function hook_stats_info() {
   $return = array(
     'term_nodecount' => array(
-      'type' => 'term_nodecount',
+      'type' => 'term_nodecount',// will be automatically added
       'active' => TRUE,
       'name' => t('Term - Node count'),
       'description' => t('Counts the number of nodes assigned to term'),
+      'file' => 'hook.stats.inc',
       'source' => array(
         'table' => 'term_node',
         'subject field' => 'tid',
@@ -66,13 +68,13 @@ function hook_stats_info() {
       'views data alter' => array(
         // ...
       ),
-    )
+    ),
   );
   return $return;
 }
 
 /**
- * Implementation of hook_stats_info_alter().
+ * Alter Stats type info.
  */
 function hook_stats_info_alter(&$info) {
 
