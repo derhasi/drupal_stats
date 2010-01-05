@@ -73,6 +73,10 @@ D & S     add             stats_callback_dands_add             type    subject n
 D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
 D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
 
+@TODO: maybe a single callback function for each D, S and D & S with param $op
+  stats_callback_derivation($op, $type, $old_values, [$subject], [$new_value])
+  stats_callback_storage($op, $type, [$values], [$subject])
+  stats_callback_ds($op, $type, [subject], [$new_value])
 
 Storage TABLE
 -------------

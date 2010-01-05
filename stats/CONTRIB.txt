@@ -5,3 +5,4 @@ Contrib module ideas:
 * module to activate or deactivate existing definitions
 * UI to build new definitions
 * definition of new storage tables
+* time driven derivation of stats
