@@ -78,6 +78,32 @@ D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
   stats_callback_storage($op, $type, [$values], [$subject])
   stats_callback_ds($op, $type, [subject], [$new_value])
 
+  or single callback
+  with flattened info array to avoid duplicates, e.g.:
+  * type                  (string)
+  * name                  (string)
+  * description           (string)
+  * callback              (string)
+  OR  * callback derive (add, rebuild single, rebuild all)
+      * callback storage (load, write)
+      * callback derive & storage (add, rebuild single, rebuild all)
+
+  * source table          (string)
+  * source subject field  (string)
+  * source value field    (string)
+  * source extra          (array)
+  * derivation mode       (string)
+  * storage table         (string)
+  * storage subject field (string)
+  * storage value field   (string)
+  * storage extra         (array)
+  * subject table         (string)
+  * subject field         (string)
+  * subject extra         (array)
+  * views data            (array)
+  * views data alter      (array)
+)
+
 Storage TABLE
 -------------
 DEFAULT implementation: stats_callback_storage_load / stats_callback_storage_write
