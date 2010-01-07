@@ -1,7 +1,0 @@
-; $Id$
-name = ImageCache DH
-description = Additional imagecache actions by derHasi.
-package = 000
-version = dev
-dependencies[] = imagecache
-core = 6.x

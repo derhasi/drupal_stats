@@ -1,6 +1,0 @@
-; $Id$
-name = Annotation API
-description = provide a central data storage and views integration for annotations
-core = 6.x
-version = dev
-package = "Annotation dH"

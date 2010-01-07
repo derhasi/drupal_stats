@@ -1,7 +1,0 @@
-; $Id$
-name = Annotation User
-description = A module that provides annotation of user.
-core = 6.x
-version = dev
-package = "Annotation dH"
-dependencies[] = annotation_api

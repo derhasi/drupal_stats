@@ -1,8 +1,0 @@
-; $Id$
-name = Annotation Marker
-description = A module that provides an annotation marker.
-core = 6.x
-version = dev
-package = "Annotation old"
-dependencies[] = jquery_update
-dependencies[] = jquery_ui
