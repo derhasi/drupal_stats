@@ -1,0 +1,125 @@
+General hook array info item:
+@see hooks.php - there is the actual implemented structure
+
+type =>
+name =>
+description =>
+source => array(
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+subject => array(
+  table =>
+  field =>
+  extra =>
+)
+derivation => array(
+  callback => array(
+    add =>
+    remove =>
+    remove_all =>
+    rebuild_single =>
+    rebuild_all =>
+  ),
+  [mode => ]
+)
+storage => array(
+  callback =>
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+derivation & storage => array(
+  callback => array(
+    add =>
+    remove =>
+    remove_batch =>
+    rebuild_single =>
+    rebuild_all =>
+  ),
+  table =>
+  subject field =>
+  value field =>
+  extra =>
+)
+views data => array(
+  ...
+)
+
+
+Main functions
+
+stats_run()     type    subject     value     REACTION                                    CALLBACK
+                X       -           -         batch rebuild for type                      rebuild_batch
+                X       X           -         batch rebuild for subject in type           rebuild_single
+                X       X           X         simple add (with eventually initiate batch) add -> rebuild_single
+
+
+Structure of callback functions
+
+mode      op              example function                          arg1    arg2    arg3    arg4
+--------------------------------------------------------------------------------------------------------
+D         add             stats_callback_derivation_add             type    ovalues subject new_value
+D         rebuild_single  stats_callback_derivation_rebuild_single  type    ovalues subject
+D         rebuild_all     stats_callback_derivation_rebuild_batch   type    ovalues
+
+S         load            stats_callback_storage_load               type    (subj)
+S         load            stats_callback_storage_write              type    values  (subj)
+
+D & S     add             stats_callback_dands_add             type    subject new_value
+D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
+D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
+
+@TODO: maybe a single callback function for each D, S and D & S with param $op
+  stats_callback_derivation($op, $type, $old_values, [$subject], [$new_value])
+  stats_callback_storage($op, $type, [$values], [$subject])
+  stats_callback_ds($op, $type, [subject], [$new_value])
+
+  or single callback
+  with flattened info array to avoid duplicates, e.g.:
+  * type                  (string)
+  * name                  (string)
+  * description           (string)
+  * callback              (string)
+  OR  * callback derive (add, rebuild single, rebuild all)
+      * callback storage (load, write)
+      * callback derive & storage (add, rebuild single, rebuild all)
+
+  * source table          (string)
+  * source subject field  (string)
+  * source value field    (string)
+  * source extra          (array)
+  * derivation mode       (string)
+  * storage table         (string)
+  * storage subject field (string)
+  * storage value field   (string)
+  * storage extra         (array)
+  * subject table         (string)
+  * subject field         (string)
+  * subject extra         (array)
+  * views data            (array)
+  * views data alter      (array)
+)
+
+Storage TABLE
+-------------
+DEFAULT implementation: stats_callback_storage_load / stats_callback_storage_write
+
+column subject    the column the subject-id (either numeric or string) will be stored
+column type       (optional) if not defined, stats API assumes that the table is only used for this type or
+                  different datasets are distinguished by extra parameters
+column value      the column the value will be stored
+
+for these callbacks it's assumed that there is only one line
+* for each subject-type combination, if subject column and type column are a combined unique column
+* for each subject, when subject is a primary key or single unique key
+
+the whole line will be stored in the stats value array as key 'data'
+
+----
+
+other implementations may add other columns:
+example: column timestamp - could implement a versioned like storage, e.g. for viewing development of stats)

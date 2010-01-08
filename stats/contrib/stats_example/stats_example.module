@@ -1,0 +1,48 @@
+<?php
+
+/**
+ * @file
+ *  example implemantion for stats.module
+ */
+
+/**
+ * Return some stats info types
+ */
+function stats_example_stats_info() {
+  $return = array(
+    'term_nodecount' => array(
+      'type' => 'term_nodecount',
+      'active' => TRUE,
+      'name' => t('Term - Node count'),
+      'description' => t('Counts the number of nodes assigned to term'),
+      'source' => array(
+        'table' => 'term_node',
+        'subject field' => 'tid',
+        'value field' => 'nid',
+        // 'extra' =>,
+      ),
+      'subject' => array(
+        'table' => 'term_data',
+        'field' => 'tid',
+        // 'extra' =>,
+      ),
+      'derivation' => array(
+        'mode' => 'count',
+      ),
+      'storage' => array(
+        'callback' => array(
+          'load' => 'stats_callback_storage_load',
+          'write' => 'stats_callback_storage_write',
+        ),
+        'table' => 'stats_int_int',
+        'subject field' => 'subject',
+        'value field' => 'value',
+        'type field' => 'type',
+        //'extra' => ,
+        'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
+        'views field declared' => FALSE, // FALSE default,
+      ),
+    )
+  );
+  return $return;
+}
