@@ -33,6 +33,7 @@ function stats_example_stats_info() {
         'callback' => array(
           'load' => 'stats_callback_storage_load',
           'write' => 'stats_callback_storage_write',
+          'rebuild all' => 'stats_callback_derivation_rebuild_all',
         ),
         'table' => 'stats_int_int',
         'subject field' => 'subject',
@@ -42,7 +43,46 @@ function stats_example_stats_info() {
         'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
         'views field declared' => FALSE, // FALSE default,
       ),
-    )
+    ),
+    'user_nodecount' => array(
+      'type' => 'user_nodecount',
+      'active' => TRUE,
+      'name' => t('User - Node count'),
+      'description' => t('Counts the number of nodes created by a user'),
+      'source' => array(
+        'table' => 'node',
+        'subject field' => 'uid',
+        'value field' => 'nid',
+        // 'extra' =>,
+      ),
+      'subject' => array(
+        'table' => 'node',
+        'field' => 'uid',
+        // 'extra' =>,
+      ),
+      'derivation' => array(
+        'mode' => 'count',
+      ),
+      'storage' => array(
+        'callback' => array(
+          'load' => 'stats_callback_storage_load',
+          'write' => 'stats_callback_storage_write',
+          'rebuild all' => 'stats_callback_derivation_rebuild_all',
+        ),
+        'table' => 'stats_int_int',
+        'subject field' => 'subject',
+        'value field' => 'value',
+        'type field' => 'type',
+        //'extra' => ,
+        'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
+        'views field declared' => FALSE, // FALSE default,
+      ),
+      'derivation & storage' => array(
+        'callback' => array(
+          'rebuild all' => 'stats_callback_derivation_rebuild_all',
+        ),
+      ),
+    ),
   );
   return $return;
 }
