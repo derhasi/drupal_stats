@@ -4,4 +4,4 @@ description = Module to provide automated statistic building, like sums, count o
 core = 6.x
 version = dev
 package = "Stats"
-dependencies[] = job_queue
+dependencies[] = drupal_queue
