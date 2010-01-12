@@ -6,20 +6,7 @@
  * Defines the basic handler interface.
  */
 
-interface stats_storage_handler {
-  public function load_single($type, $subject);
-  public function load_all($type);
-  public function write_single($type, $value);
-  public function write_all($type, $values);
-}
 
-interface stats_calculation_handler {
-  public function calculate();
-}
-
-interface stats_calculate_and_write_handler {
-  public function calculate_and_write();
-}
 
 /**
  * Structure of info array().
