@@ -29,7 +29,7 @@ require_once 'stats.callbacks.inc';
  *  Returns FALSE if run was not successfull.
  */
 function stats_run($type, $subject = NULL, $new_value = NULL, $return_values = FALSE) {
-  $type = stats_type($type);
+  $type = stats_get_type($type);
   // Check definition
   if (!is_array($type)) {
     watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
@@ -185,7 +185,7 @@ function stats_queue_worker_callback($item) {
  *  array of stats value arrays
  */
 function stats_load($type, $subject = NULL, $only_value = TRUE) {
-  $type = stats_type($type);
+  $type = stats_get_type($type);
   if ($type) {
     $return = call_user_func($type['storage']['load'], $type, $subject);
     return $return;
@@ -238,7 +238,7 @@ function stats_types() {
  * @return
  *   stats type info array
  */
-function stats_type($type) {
+function stats_get_type($type) {
   $stats_types = stats_types();
   if (isset($stats_types[$type])) {
     return $stats_types[$type];
