@@ -56,7 +56,7 @@ function stats_example_stats_info() {
         // 'extra' =>,
       ),
       'subject' => array(
-        'table' => 'node',
+        'table' => 'users',
         'field' => 'uid',
         // 'extra' =>,
       ),

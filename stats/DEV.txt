@@ -73,8 +73,8 @@ D & S     add             stats_callback_dands_add             type    subject n
 D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
 D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
 
-@TODO: maybe a single callback function for each D, S and D & S with param $op
-  stats_callback_derivation($op, $type, $old_values, [$subject], [$new_value])
+@TODO: maybe a single callback function for each C, S and C & S with param $op
+  stats_callback_calculation($op, $type, $old_values, [$subject], [$new_value])
   stats_callback_storage($op, $type, [$values], [$subject])
   stats_callback_ds($op, $type, [subject], [$new_value])
 
@@ -83,30 +83,34 @@ D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
   * type                  (string)
   * name                  (string)
   * description           (string)
-  * callback              (string)
-  OR  * callback derive (add, rebuild single, rebuild all)
-      * callback storage (load, write)
-      * callback derive & storage (add, rebuild single, rebuild all)
+  * handler               (string)
+  OR
+  * handler               (array)
+      * calculate (add, rebuild single, rebuild all)
+      * storage (load, write)
+      * calculate & storage (add, rebuild single, rebuild all)
 
   * source table          (string)
   * source subject field  (string)
   * source value field    (string)
   * source extra          (array)
-  * derivation mode       (string)
+  * calculation mode      (string)
   * storage table         (string)
   * storage subject field (string)
   * storage value field   (string)
   * storage extra         (array)
+for building automated views integration
   * subject table         (string)
   * subject field         (string)
   * subject extra         (array)
+for custom views integration
   * views data            (array)
   * views data alter      (array)
 )
 
 Storage TABLE
 -------------
-DEFAULT implementation: stats_callback_storage_load / stats_callback_storage_write
+DEFAULT implementation: stats_callback_storage / stats_callback_storage
 
 column subject    the column the subject-id (either numeric or string) will be stored
 column type       (optional) if not defined, stats API assumes that the table is only used for this type or
@@ -123,3 +127,5 @@ the whole line will be stored in the stats value array as key 'data'
 
 other implementations may add other columns:
 example: column timestamp - could implement a versioned like storage, e.g. for viewing development of stats)
+
+
