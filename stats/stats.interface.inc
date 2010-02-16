@@ -2,7 +2,6 @@
 // $Id$
 /**
  * @file
- *
  * Defines the basic handler interface.
  */
 
@@ -42,8 +41,12 @@
 
 
     - delete
+      single
+      batch
+      all
 
-
+    CALLBACK -  $op, $stats_worker, $subjects, $values, $update
+    op: load, insert, update, delete
 
   * callback calculation
     variables per subject (old stats value, new item)
@@ -51,7 +54,8 @@
     - batch - 1 to n subjects
     - single
 
-  * callback storage
+    CALLBACK -  $op, $stats_worker, $subjects, $new_values, $old_values
+    op: add, recalculate, recalculate all
 
   * callback storing calculation
 
@@ -89,24 +93,55 @@
   */
 
 class stats_worker {
+  /**
+   * Basic variables for this class.
+   */
   var $type; // stats type
   var $name; // Human readable name
   var $description; // Human readable description
   var $settings = array(); // Additional settings, e.g for storage and calc.
 
-  var $callbacks = array();
+  var $callbacks = array(
+        'storage' => '',
+        'calculation' => '',
+        'storing calculation' => '',
+      );
 
+  /**
+   * Subjects to be calculated.
+   */
   var $subjects = array(); // key subject, val subject
 
+  /**
+   * Items that shall be considered for the specific subject for calculation.
+   * Each subject has its own keyed array:
+   * @code
+   * 'subject97' => array( 'item1', 'item2'),
+   * 'subject220' => array(...),
+   * @endcode
+   */
   var $new_items = array(); // key subject, val array of items
+  /**
+   * Defines subjects for that values should be recalculated.
+   */
   var $recalculate_subjects = array(); // key subject, val TRUE
+  /**
+   * Defines that all values for the defined stats type should be recalculated.
+   */
   var $recalculate_all = FALSE;
 
   //var $subjects_loaded = array();
   //var $subjects_locked = array();
   //var $loaded_values = array();
-  var $values = array();
 
+  /**
+   * Values that have been calculated by ->calculate().
+   */
+  var $new_values = array();
+
+  /**
+   * Methods are listed below.
+   */
 
   /**
    * Default constructor to implement the stats type info.
@@ -121,10 +156,18 @@ class stats_worker {
     $this->name = $info['name'];
     $this->description = $info['description'];
     // Remove default keys (see above) and handler (selector for class)
-    unset($info['type'], $info['name'], $info['description'], $info['handler']);
+    // unset($info['type'], $info['name'], $info['description'], $info['handler']);
     // @TODO: add error handling for missing values.
     $this->settings = $info;
     $this->initialize_callbacks();
+  }
+
+  /**
+   * Build the callback implementations for storage, calculation and storing
+   * calculation.
+   */
+  function initialize_callbacks (&$callbacks) {
+
   }
 
   /**
@@ -154,54 +197,57 @@ class stats_worker {
     }
   }
 
+  /**
+   * Recalculate all values for the defined stats type.
+   */
   public function recalculate() {
     $this->recalculate_all = TRUE;
     return $this->calculate();
   }
 
   /**
-   * Build the callback implementations for storage, calculation and storing
-   * calculation.
+   * Calculate and store new values for the defined subjects.
+   *
+   * Will consider ->new_items, ->recalculate_subjects and ->recalculate_all
+   * for calculating and
    */
-  function initialize_callbacks (&$callbacks) {
+  public function execute() {
+
+    if (!$this->settings['callbacks']['storing calculation']) {
+      $this->calculate();
+      $this->write();
+    }
+    else {
+
+      if ($this->recalculate_all == TRUE) {
+
+      }
+      else {
+
+      }
+    }
 
   }
 
   /**
-   * Load
-   *
-   * The mode for calculation and storage is dependent on the way data is
-   * loaded.
-   *
+   * Load values for the defined subjects.
    */
-  private function load($subject = NULL) {
+  private function load() {
 
   }
 
   /**
-   * Calculate
+   * Calculate new values without storing them.
    */
   public function calculate() {
 
   }
 
+  /**
+   * Store actual calculation.
+   */
   public function write() {
 
-  }
-
-  /**
-   * Determines the subject range to work on. May queue locked subjects for
-   * further calculation.
-   * Subjects could be locked through other processes dealing with the specific
-   * subjects. ...
-   */
-  function initialize_subject_mode($subject = NULL) {
-
-
-
-    if (!isset($subject)) {
-
-    }
   }
 
 }

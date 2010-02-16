@@ -6,6 +6,120 @@
  */
 
 /**
+ * Default callback to provide storage via database.
+ *
+ * @param $op
+ *  the operator can either be:
+ *  - 'load' to load data from the databse
+ *  - 'insert' to write new data to the database
+ *  - 'update' to write exisiting data to the database
+ *  - 'delete' data from the database
+ * @param $settings
+ *  settings array from the type definition (like defined in hook_stats_info())
+ * @param $subjects
+ *  array of subjects that should by affected with write, load or delete
+ *  (optional) for 'load' and 'delete' - if not specified it will delete or load
+ *  all subjects
+ * @param $new_values
+ *  only needed for 'insert' and 'write', new values that will be written to the
+ *  database
+ *
+ * @return
+ *  - insert, update, delete: TRUE on successful operation, else FALSE
+ *  - load: array of values
+ *    @code
+ *    array(
+ *      0 => array(
+ *      - 'subject' => subject_id,
+ *      - 'value' => value of the value column,
+ *      - 'data' => additional column values,
+ *      ),
+ *      1 => ...
+ *    )
+ *    @endcode
+ */
+function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_values = NULL) {
+
+  $table = $settings['storage table'];
+  $subject_field = $settings['storage subject field'];
+  $type_field = $settings['storage type field'];
+  $value_field = $type['storage value field'];
+  $extra =  $type['storage extra'];
+  if (isset($subjects) && !is_array($subjects)) {
+    $subjects = array($subjects);
+  }
+
+  switch ($op) {
+    case 'load':
+      $query = "SELECT * FROM {$table}";
+      $args = array();
+
+      if (isset($subjects)) {
+        $cast_subject = '%d'; // @TODO: retrieve type conversion from schema
+        $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
+        $args = $subjects;
+      }
+
+      // Add type column to check in query
+      if ($type_field) {
+        if ($where) {
+          $where .= ' AND ';
+        }
+        $where .= "$type_field = '%s'";
+        $args[] = $settings['type'];
+      }
+
+      if ($where) { $query .= ' WHERE '. $where;}
+
+      $res = db_query($query, $args);
+      // Return FALSE for invalid queries.
+      if ($res === FALSE) return FALSE;
+
+      // Return an array for valid values.
+      $return = array();
+      while ($line = db_fetch_array($res)) {
+        $return[] = array(
+          'subject' => $line[$subject_field],
+          //'type' => $type['type'],
+          'value' => $line[$value_field],
+          'data' => $line,
+          );
+      }
+      return $return;
+    case 'insert':
+      // @TODO
+    case 'write':
+      // @TODO
+    case 'delete':
+      // @TODO
+  }
+
+
+
+
+}
+
+/**
+ * Default callback for general calculations modes.
+ *
+* @param $op
+ *  the operator can either be:
+ *  - 'recalculate all'
+ *  - 'recalculate'
+ *  - 'add'
+ * @param $settings
+ *  settings array from the type definition (like defined in hook_stats_info())
+ * @param $subjects
+ *  array of subjects that should by calculated
+ *  (optional) for 'load' and 'delete' - if not specified it will delete or load
+ *  all subjects
+ */
+function stats_callback_default_calculation($op, $settings, $subjects = NULL, $new_items = array(), $old_values = array()) {
+  // @TODO
+}
+
+
+/**
  * Default callback function for loading stats values.
  * @param $type
  *   type array

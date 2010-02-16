@@ -254,6 +254,28 @@ function stats_get_type($type) {
 function _stats_info_alter(&$stats_types) {
   foreach ($stats_types as $key => $type) {
 
+    // Set default handler and default callbacks
+    if (empty($type['handler'])) {
+      $type['handler'] = 'stats_worker';
+    }
+
+    if (empty($type['callbacks'])) {
+      $type['callbacks'] = array(
+        'storage' => 'stats_callback_default_storage',
+        'calcualtion' => 'stats_callback_default_calculation',
+        'storing calcualtion' => 'stats_callback_default_storing_calculation',
+      );
+    }
+    elseif (!is_array($type['callbacks'])) {
+      $callback = $type['callbacks'];
+      $type['callbacks'] = array(
+        'storage' => $callback,
+        'calculation' => $callback,
+        //'storing calculation' => $callback,
+      );
+    }
+
+
     // Set default derivation callbacks
     if (empty($type['derivation']['callback'])) {
       $type['derivation']['callback'] = array(
