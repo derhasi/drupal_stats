@@ -125,12 +125,12 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $n
  *   type array
  * @param $subject
  *   (optional) will retrive data only for the given subject
- * @param $new_value
+ * @param $addition
  *   (optional) - not needed for the default load implementation
  * @return
  *   array of stats value arrays
  */
-function stats_callback_storage_load($type, $subject = NULL, $new_value = NULL) {
+function stats_callback_storage_load($type, $subject = NULL, $addition = NULL) {
 
   $table = $type['storage']['table'];
   $col_subj = $type['storage']['subject field'];
@@ -173,12 +173,12 @@ function stats_callback_storage_load($type, $subject = NULL, $new_value = NULL) 
  *   data to write
  * @param $subject
  *   (optional) will write data only for the given subject
- * @param $new_value
+ * @param $addition
  *   (optional) - not needed for the default write implementation
  * @return
  *   count of succesful writes
  */
-function stats_callback_storage_write($type, $values, $subject = NULL, $new_value = NULL) {
+function stats_callback_storage_write($type, $values, $subject = NULL, $addition = NULL) {
 
   if (isset($subject) && isset($values[$subject]) && $values[$subject]['type'] == $type['type']) {
     $write = array($subject => $values[$subject]);
@@ -334,13 +334,13 @@ function stats_callback_derivation_rebuild_single($type, $old_values, $subject) 
  *   array of former values
  * @param $subject
  *   id for the subject to rebuild for
- * @param $new_value
+ * @param $addition
  *   new value that will or was added to the system, and so may be compared to
  *   existing values
  * @return
  *   array of derived values
  */
-function stats_callback_derivation_add($type, $old_values, $subject, $new_value) {
+function stats_callback_derivation_add($type, $old_values, $subject, $addition) {
 
   $mode = strtoupper($type['derivation']['mode']);
   $table = $type['source']['table'];
@@ -365,21 +365,21 @@ function stats_callback_derivation_add($type, $old_values, $subject, $new_value)
           $return = array(
             'subject' => $subject,
             'type' => $type['type'],
-            'value' => max($val['value'], $new_value),
+            'value' => max($val['value'], $addition),
           );
           break;
         case 'MIN':
           $return = array(
             'subject' => $subject,
             'type' => $type['type'],
-            'value' => min($val['value'], $new_value),
+            'value' => min($val['value'], $addition),
           );
           break;
         case 'SUM':
           $return = array(
             'subject' => $subject,
             'type' => $type['type'],
-            'value' => $val['value'] + $new_value,
+            'value' => $val['value'] + $addition,
           );
           break;
       }

@@ -62,21 +62,21 @@ Structure of callback functions
 
 mode      op              example function                          arg1    arg2    arg3    arg4
 --------------------------------------------------------------------------------------------------------
-D         add             stats_callback_derivation_add             type    ovalues subject new_value
+D         add             stats_callback_derivation_add             type    ovalues subject addition
 D         rebuild_single  stats_callback_derivation_rebuild_single  type    ovalues subject
 D         rebuild_all     stats_callback_derivation_rebuild_batch   type    ovalues
 
 S         load            stats_callback_storage_load               type    (subj)
 S         load            stats_callback_storage_write              type    values  (subj)
 
-D & S     add             stats_callback_dands_add             type    subject new_value
+D & S     add             stats_callback_dands_add             type    subject addition
 D & S     rebuild_single  stats_callback_dands_rebuild_single  type    subject
 D & S     rebuild_all     stats_callback_dands_rebuild_batch   type
 
 @TODO: maybe a single callback function for each C, S and C & S with param $op
-  stats_callback_calculation($op, $type, $old_values, [$subject], [$new_value])
+  stats_callback_calculation($op, $type, $old_values, [$subject], [$addition])
   stats_callback_storage($op, $type, [$values], [$subject])
-  stats_callback_ds($op, $type, [subject], [$new_value])
+  stats_callback_ds($op, $type, [subject], [$addition])
 
   or single callback
   with flattened info array to avoid duplicates, e.g.:
@@ -127,5 +127,3 @@ the whole line will be stored in the stats value array as key 'data'
 
 other implementations may add other columns:
 example: column timestamp - could implement a versioned like storage, e.g. for viewing development of stats)
-
-

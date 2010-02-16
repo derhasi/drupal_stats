@@ -28,17 +28,19 @@ Wording:
 - stats type:
   * predefined way of storing, calculation and assignation of stats
   * string identifier for type
-- stats specification
+- stats specification:
   * array that holds parameters and callbacks for a stats type
-- subject
+- subject:
   * entity stat is assigned to
 - value
   * a value (can be of any type, any type combination, also an entity) that is
     stored for a given type
-- addition
+- addition:
   * a new variable/value that initiates the calcualtion of a new stat value
+- new values:
+  * most times an array of newly calculated values
+    it shall never be used as alias for 'addition'
 
-Elements:
 - stats_worker:
   * a handler like class that defines the way statistics will work. This glues
     the different levels storage and calculation. For "storing calculation"
@@ -49,4 +51,4 @@ Elements:
 - callback:
   * function that has a specific task to work on. In the default stats_worker
     there are used different callbacks:
-    * 
+    *
