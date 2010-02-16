@@ -49,7 +49,7 @@
     op: load, insert, update, delete
 
   * callback calculation
-    variables per subject (old stats value, new item)
+    variables per subject (old stats value, addition)
     - all - no subject
     - batch - 1 to n subjects
     - single
@@ -113,14 +113,15 @@ class stats_worker {
   var $subjects = array(); // key subject, val subject
 
   /**
-   * Items that shall be considered for the specific subject for calculation.
+   * Additions that shall be considered for the specific subject for calculation.
    * Each subject has its own keyed array:
    * @code
-   * 'subject97' => array( 'item1', 'item2'),
+   * 'subject97' => array( 'addition1', 'addition2'),
    * 'subject220' => array(...),
    * @endcode
    */
-  var $new_items = array(); // key subject, val array of items
+  var $additions = array(); // key subject, val array of additions
+
   /**
    * Defines subjects for that values should be recalculated.
    */
@@ -174,22 +175,22 @@ class stats_worker {
    * Add a new subject to the 'to work queue'. This subject will be calculated
    * when $this->calculate() is called.
    *
-   * New items are queued in a new_items array for passing it later to the
+   * Additions are queued in a additions array for passing it later to the
    * calculation function.
-   * Without setting the $new_item the stat will be recalculated for the subject
-   * therefore new items for the subject would be ignored.
+   * Without setting the $addition the stat will be recalculated for the subject
+   * therefore additions for the subject would be ignored.
    *
    * @param $subject
    *   ID of the subject
-   * @param $new_item
-   *   (optional) the new item that initiates the calculation
+   * @param $addition
+   *   (optional) the addition that initiates the calculation
    */
-  public function add_subject($subject, $new_item = NULL) {
+  public function add_subject($subject, $addition = NULL) {
     // Add to subjects array
     $this->subjects[$subject] = $subject;
-    // Add to new items array
-    if (isset($new_item)) {
-      $this->new_items[$subject][] = $new_item;
+    // Add to new additions array
+    if (isset($addition)) {
+      $this->additions[$subject][] = $addition;
     }
     // rebuild for the given subject
     else {
@@ -208,7 +209,7 @@ class stats_worker {
   /**
    * Calculate and store new values for the defined subjects.
    *
-   * Will consider ->new_items, ->recalculate_subjects and ->recalculate_all
+   * Will consider ->additions, ->recalculate_subjects and ->recalculate_all
    * for calculating and
    */
   public function execute() {
