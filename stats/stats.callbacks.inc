@@ -171,118 +171,20 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
  * @return
  */
 function stats_callback_default_calculation($op, $settings, $subjects = NULL, $additions = array(), $current_values = array()) {
+  $table = $settings['source table'];
+  $subject_field = $settings['source subject field'];
+  $value_field = $settings['source value field'];
+  $calc_mode = $settings['calculation mode'];
+
   // @TODO
   switch ($op) {
     case 'add':
+
     case 'recalculate all':
     case 'recalculate':
   }
 }
 
-
-/**
- * Default callback function for loading stats values.
- * @param $type
- *   type array
- * @param $subject
- *   (optional) will retrive data only for the given subject
- * @param $addition
- *   (optional) - not needed for the default load implementation
- * @return
- *   array of stats value arrays
- */
-function stats_callback_storage_load($type, $subject = NULL, $addition = NULL) {
-
-  $table = $type['storage']['table'];
-  $col_subj = $type['storage']['subject field'];
-  $col_val = $type['storage']['value field'];
-
-  $query = "SELECT * FROM {$table}";
-  $args = array();
-
-  if (isset($subject)) {
-    $cast_subject = '%d'; // TODO: retrieve type conversion from schema
-    $query .= " WHERE $col_subj = $cast_subject";
-    $args = array($subject);
-  }
-
-  $res = db_query($query, $args);
-  // Return FALSE for invalid queries.
-  if ($res === FALSE) return FALSE;
-
-  // Return an array for valid queries.
-  $return = array();
-  while ($line = db_fetch_array($res)) {
-    if ($line[$type['storage']['type field']] == $type['type']) {
-      $return[$line[$col_subj]] = array(
-        'subject' => $line[$col_subj],
-        'type' => $type['type'],
-        'value' => $line[$col_val],
-        'data' => $line,
-      );
-    }
-  }
-  return $return;
-
-}
-
-/**
- * Default callback function for writing stats values.
- * @param $type
- *   type array
- * @param $values,
- *   data to write
- * @param $subject
- *   (optional) will write data only for the given subject
- * @param $addition
- *   (optional) - not needed for the default write implementation
- * @return
- *   count of succesful writes
- */
-function stats_callback_storage_write($type, $values, $subject = NULL, $addition = NULL) {
-
-  if (isset($subject) && isset($values[$subject]) && $values[$subject]['type'] == $type['type']) {
-    $write = array($subject => $values[$subject]);
-  }
-  elseif (isset($subject)) {
-    return FALSE;
-  }
-  else {
-    //only write defined types data
-    foreach ($values as $key => $val) {
-      if ($val['type'] == $type['type']) {
-        $write[$val['subject']] = $val;
-      }
-    }
-  }
-
-  $table = $type['storage']['table'];
-  $col_subj = $type['storage']['subject field'];
-  $col_val = $type['storage']['value field'];
-
-  $return = 0;
-
-  // retrieve update or insert for each value
-  foreach ($write as $subject => $val) {
-
-    if ($val['update']) {
-      // TODO, maybe retrieve extra col
-      $update = array($col_subj);
-    }
-    else {
-      $update = array();
-    }
-
-    //Get line-object
-    $data = $val['data'];
-    $data[$col_subj] = $subject;
-    $data[$col_val] = $val['value'];
-
-    $ret = drupal_write_record($table, $record, $update);
-    $return += $ret;
-  }
-  return $return;
-}
 
 /**
  * Default callback function for batch rebuild
