@@ -361,3 +361,15 @@ function stats_views_api() {
     'path' => drupal_get_path('module', 'stats'),
   );
 }
+
+/**
+ * Helper function for getting the schema specific place hold for the column.
+ */
+function _stats_column_type_conversion_helper($table, $field) {
+  static $conv;
+  if (!isset($conv[$table][$field])) {
+    $schema = drupal_get_schema($table);
+    $conv[$table] = db_type_placeholder($schema['fields'][$field]['type']);
+  }
+  return $conv[$table][$field];
+}

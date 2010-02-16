@@ -66,16 +66,16 @@
   * source table          (string)
   * source subject field  (string)
   * source value field    (string)
-  * source extra          (array)
+  * source extra          (array) - not implemented yet!
   * calculation mode      (string)
   * storage table         (string)
   * storage subject field (string)
   * storage value field   (string)
-  * storage extra         (array)
+  * storage extra         (array) - not implemented yet!
   for building automated views integration
   * subject table         (string)
   * subject field         (string)
-  * subject extra         (array)
+  * subject extra         (array)  - not implemented yet!
   for custom views integration
   * views data            (array)
   * views data alter      (array)
@@ -84,14 +84,10 @@
   *
   *
   *
-  * FEATURES:
+  * @TODO: FEATURES:
   * - locked subjects
   * -
-
-
-
   */
-
 class stats_worker {
   /**
    * Basic variables for this class.
@@ -156,7 +152,7 @@ class stats_worker {
     $this->type = $info['type'];
     $this->name = $info['name'];
     $this->description = $info['description'];
-    // Remove default keys (see above) and handler (selector for class)
+    // // Remove default keys (see above) and handler (selector for class)
     // unset($info['type'], $info['name'], $info['description'], $info['handler']);
     // @TODO: add error handling for missing values.
     $this->settings = $info;
@@ -201,7 +197,7 @@ class stats_worker {
   /**
    * Recalculate all values for the defined stats type.
    */
-  public function recalculate() {
+  public function recalculate_all() {
     $this->recalculate_all = TRUE;
     return $this->calculate();
   }
@@ -214,10 +210,13 @@ class stats_worker {
    */
   public function execute() {
 
-    if (!$this->settings['callbacks']['storing calculation']) {
+    // If no storing calculation is available, serial processing is needed
+    // first calculate then store
+    if (!$this->settings['callback storing calculation']) {
       $this->calculate();
       $this->write();
     }
+    // @TODO: implement storing calculation callback
     else {
 
       if ($this->recalculate_all == TRUE) {
@@ -231,7 +230,7 @@ class stats_worker {
   }
 
   /**
-   * Load values for the defined subjects.
+   * Load existing values for the defined subjects.
    */
   private function load() {
 

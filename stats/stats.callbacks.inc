@@ -21,7 +21,7 @@
  *  (optional) for 'load' and 'delete' - if not specified it will delete or load
  *  all subjects
  * @param $new_values
- *  only needed for 'insert' and 'write', new values that will be written to the
+ *  only needed for 'insert' and 'update', new values that will be written to the
  *  database
  *
  * @return
@@ -32,7 +32,7 @@
  *      0 => array(
  *      - 'subject' => subject_id,
  *      - 'value' => value of the value column,
- *      - 'data' => additional column values,
+ *      - 'line' => the whole line,
  *      ),
  *      1 => ...
  *    )
@@ -54,9 +54,11 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
       $query = "SELECT * FROM {$table}";
       $args = array();
 
+      // Restrict load on specified subjects
       if (isset($subjects)) {
-        $cast_subject = '%d'; // @TODO: retrieve type conversion from schema
+        $cast_subject = _stats_column_type_conversion_helper($table, $subject_field);
         $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
+        $where = "($where)";
         $args = $subjects;
       }
 
@@ -65,7 +67,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
         if ($where) {
           $where .= ' AND ';
         }
-        $where .= "$type_field = '%s'";
+        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);// @TODO: retrieve type conversion from schema
         $args[] = $settings['type'];
       }
 
@@ -82,21 +84,72 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
           'subject' => $line[$subject_field],
           //'type' => $type['type'],
           'value' => $line[$value_field],
-          'data' => $line,
+          'line' => $line,
           );
       }
       return $return;
     case 'insert':
-      // @TODO
-    case 'write':
-      // @TODO
+      // Insert every subject via drupal_write_record
+      // @TODO: may be low performant on many inserts, so add alternative
+      $return = FALSE;
+      foreach ($subjects as $subject) {
+        if ($type_field) {
+          $obj = (object) array(
+            $subject_field => $subject,
+            $type_field => $settings['type'],
+            $value_field => $new_values[$subject],
+          );
+        }
+        $return += drupal_write_record($table,$obj) / SAVED_NEW;
+      }
+      return (count($subjects) == $return);
+    case 'update':
+      // Insert every subject via drupal_write_record
+      // @TODO: may be low performant on many inserts, so add alternative
+      $return = FALSE;
+      // Specifiy update columns
+      $update = array($subject_field);
+      if ($type_field) { $update[] = $type_field;}
+
+      foreach ($subjects as $subject) {
+        if ($type_field) {
+          $obj = (object) array(
+            $subject_field => $subject,
+            $type_field => $settings['type'],
+            $value_field => $new_values[$subject],
+          );
+        }
+        // divide by constant to retrieve succesfull calls, as SAVED_UPDATED = 2
+        $return += drupal_write_record($table,$obj, $update) / SAVED_UPDATED;
+      }
+      return (count($subjects) == $return);
     case 'delete':
-      // @TODO
+      $query = "DELETE FROM {$table}";
+      $args = array();
+
+      // Restrict load on specified subjects
+      if (isset($subjects)) {
+        $cast_subject = _stats_column_type_conversion_helper($table, $subject_field);
+        $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
+        $where = "($where)";
+        $args = $subjects;
+      }
+
+      // Add type column to check in query
+      if ($type_field) {
+        if ($where) {
+          $where .= ' AND ';
+        }
+        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);// @TODO: retrieve type conversion from schema
+        $args[] = $settings['type'];
+      }
+
+      if ($where) { $query .= ' WHERE '. $where;}
+
+      $res = db_query($query, $args);
+      return $res;
   }
-
-
-
-
+  return ;
 }
 
 /**
@@ -113,9 +166,17 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
  *  array of subjects that should by calculated
  *  (optional) for 'load' and 'delete' - if not specified it will delete or load
  *  all subjects
+ * @param $additions
+ * @param $current_values
+ * @return
  */
-function stats_callback_default_calculation($op, $settings, $subjects = NULL, $new_items = array(), $old_values = array()) {
+function stats_callback_default_calculation($op, $settings, $subjects = NULL, $additions = array(), $current_values = array()) {
   // @TODO
+  switch ($op) {
+    case 'add':
+    case 'recalculate all':
+    case 'recalculate':
+  }
 }
 
 
