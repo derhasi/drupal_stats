@@ -176,186 +176,71 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   $value_field = $settings['source value field'];
   $calc_mode = strtoupper($settings['calculation mode']);
 
+  // copy current values for return
+  $return = $current_values;
+
+  // Only process add mode, if callback is available for calc mode
+  $addfunc = str_replace(' ', '_', '_stats_calc_add_'. strtolower($calc_mode));
+  if ($op == 'add' && !function_exists($addfunc)) {
+    // switch to recalculate
+    watchdog('stats', 'Calculation switched from add to recalculate, due to missing add function for %calc_mode', array('%calc_mode' => $calc_mode), WATCHDOG_WARNING);
+    $op = 'recalculate';
+  }
+
+  $args = array();
   // @TODO
   switch ($op) {
     case 'add':
-
-    case 'recalculate all':
+      foreach ($subjects as $subject) {
+        $return[$subject] = call_user_func($addfunc, $current_values[$subject], $additions[$subject]);
+      }
+      return $return;
     case 'recalculate':
-  }
-}
-
-
-/**
- * Default callback function for batch rebuild
- * @param $type
- *   type array, as defined in hook_stats_info()
- * @param $old_values
- *   array of former values
- * @return
- *   array of derived values
- */
-function stats_callback_derivation_rebuild_all($type, $old_values = NULL) {
-
-  $mode = strtoupper($type['derivation']['mode']);
-  $table = $type['source']['table'];
-  $c_subj = $type['source']['subject field'];
-  $c_val = $type['source']['value field'];
-
-  switch ($mode) {
-    case 'COUNT ROWS':
-    case 'COUNT_ROWS':
-      $query = "SELECT $c_subj AS subject, COUNT(*) AS result FROM {$table} GROUP BY $c_subj";
-      $args = array();
-      break;
-    default:
-      $query = "SELECT $c_subj AS subject, $mode($c_val) AS result FROM {$table} GROUP BY $c_subj";
-      $args = array();
-      break;
-  }
-
-  $res = db_query($query, $args);
-  // Return FALSE for invalid queries.
-  if ($res === FALSE) return FALSE;
-
-  // Return an array for valid queries.
-  $return = array();
-  while ($line = db_fetch_object($res)) {
-    $return[$line->subject] = array(
-      'subject' => $line->subject,
-      'type' => $type['type'],
-      'value' => $line->result,
-    );
-    // add old line data
-    if (isset($old_values[$line->subject])) {
-      $return[$line->subject]['data'] = $old_values[$line->subject]['data'];
-      $return[$line->subject]['update'] = TRUE;
-    }
-  }
-  return $return;
-}
-
-/**
- * Default callback function for a single rebuild.
- * @param $type
- *   type array, as defined in hook_stats_info()
- * @param $old_values
- *   array of former values
- * @param $subject
- *   id for the subject to rebuild for
- * @return
- *   array of derived values
- */
-function stats_callback_derivation_rebuild_single($type, $old_values, $subject) {
-
-  $mode = strtoupper($type['derivation']['mode']);
-  $table = $type['source']['table'];
-  $col_subj = $type['source']['subject field'];
-  $col_val = $type['source']['value field'];
-
-  $cast_subject = '%d'; // TODO: retrieve type conversion from schema
-
-  switch ($mode) {
-    case 'COUNT ROWS':
-    case 'COUNT_ROWS':
-      $query = "SELECT $col_subj AS subject, COUNT(*) AS result FROM {$table} WHERE $col_subj = $cast_subject GROUP BY $col_subj";
-      $args = array($subject);
-      break;
-    default:
-      $query = "SELECT $col_subj AS subject, $mode($col_val) AS result FROM {$table} WHERE $col_subj = $cast_subject GROUP BY $col_subj";
-      $args = array($subject);
-      break;
-  }
-
-  $res = db_query($query, $args);
-  // Return FALSE for invalid queries.
-  if ($res === FALSE) return FALSE;
-
-  // Return an array for valid queries.
-  $return = array();
-  while ($line = db_fetch_object($res)) {
-    $return[$line->subject] = array(
-      'subject' => $line->subject,
-      'type' => $type['type'],
-      'value' => $line->result,
-    );
-    // add old new line data
-    if (isset($old_values[$line->subject])) {
-      $return[$line->subject]['data'] = $old_values[$line->subject]['data'];
-      $return[$line->subject]['update'] = TRUE;
-    }
-
-  }
-  return $return;
-}
-
-/**
- * Default callback function for a single rebuild.
- * @param $type
- *   type array, as defined in hook_stats_info()
- * @param $old_values
- *   array of former values
- * @param $subject
- *   id for the subject to rebuild for
- * @param $addition
- *   new value that will or was added to the system, and so may be compared to
- *   existing values
- * @return
- *   array of derived values
- */
-function stats_callback_derivation_add($type, $old_values, $subject, $addition) {
-
-  $mode = strtoupper($type['derivation']['mode']);
-  $table = $type['source']['table'];
-  $col_subj = $type['source']['subject field'];
-  $col_val = $type['source']['value field'];
-
-  $cast_subject = '%d'; // TODO: retrieve type conversion from schema
-
-  // Work with old_values
-  if (isset($old_values[$subject])) {
-    $val = $old_values[$subject];
-    if ($val['subject'] == $subject) {
-      switch ($mode) {
-        case 'COUNT':
-          $return = array(
-            'subject' => $subject,
-            'type' => $type['type'],
-            'value' => $val['value'] + 1,
-          );
+      // no Subjects no calculation, return uncalulated current values
+      if (!count($subjects)) {
+        return $return;
+      }
+      $cast_subject = _stats_column_type_conversion_helper($table, $subject_field);
+      $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
+      $where = "WHERE ($where)";
+      $args = $subjects;
+      // no break, because query of recalculate will be altered with $where
+    case 'recalculate all':
+      switch ($calc_mode) {
+        case 'COUNT ROWS':
+        case 'COUNT_ROWS':
+          $query = "SELECT $subject_field AS subject, COUNT(*) AS result FROM {$table} $where GROUP BY $subject_field";
           break;
-        case 'MAX':
-          $return = array(
-            'subject' => $subject,
-            'type' => $type['type'],
-            'value' => max($val['value'], $addition),
-          );
-          break;
-        case 'MIN':
-          $return = array(
-            'subject' => $subject,
-            'type' => $type['type'],
-            'value' => min($val['value'], $addition),
-          );
-          break;
-        case 'SUM':
-          $return = array(
-            'subject' => $subject,
-            'type' => $type['type'],
-            'value' => $val['value'] + $addition,
-          );
+        default:
+          $query = "SELECT $subject_field AS subject, $calc_mode($value_field) AS result FROM {$table} $where GROUP BY $subject_field";
           break;
       }
-      // Add data
-      if (isset($return)) {
-        $return['data'] = $val['data'];
-        $return['update'] = TRUE; // set update key for storage
+
+      $res = db_query($query, $args);
+      while ($item = db_fetch_object($res)) {
+        $return[$item->subject] = $item->result;
       }
+      return $return;
 
-    }
+      break;
   }
-  // new subjects -> else {}
+}
 
-  // Fall back on single rebuild
-  return stats_callback_derivation_rebuild_single($type, $old_values, $subject);
+/**
+ * Add calc functions
+ */
+function _stats_calc_add_count($old_value, $additions) {
+  return $old_value + count($additions);
+}
+function _stats_calc_add_count_rows($old_value, $additions) {
+  return $old_value + count($additions);
+}
+function _stats_calc_add_sum($old_value, $additions) {
+  return $old_value + sum($additions);
+}
+function _stats_calc_add_min($old_value, $additions) {
+  return min($old_value, min($additions));
+}
+function _stats_calc_add_max($old_value, $additions) {
+  return max($old_value, max($additions));
 }
