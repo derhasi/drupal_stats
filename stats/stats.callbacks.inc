@@ -174,7 +174,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   $table = $settings['source table'];
   $subject_field = $settings['source subject field'];
   $value_field = $settings['source value field'];
-  $calc_mode = $settings['calculation mode'];
+  $calc_mode = strtoupper($settings['calculation mode']);
 
   // @TODO
   switch ($op) {
