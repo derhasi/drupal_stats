@@ -162,6 +162,9 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
  *  - 'add'
  * @param $settings
  *  settings array from the type definition (like defined in hook_stats_info())
+ *  with $settings['calculation mode'] the way values are calculated will be
+ *  specified. In recalculate and reculalculate an SQL-Function with this name
+ *  will be called, like SUM or COUNT.
  * @param $subjects
  *  array of subjects that should by calculated
  *  (optional) for 'load' and 'delete' - if not specified it will delete or load
@@ -206,14 +209,32 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
       $args = $subjects;
       // no break, because query of recalculate will be altered with $where
     case 'recalculate all':
-      switch ($calc_mode) {
-        case 'COUNT ROWS':
-        case 'COUNT_ROWS':
-          $query = "SELECT $subject_field AS subject, COUNT(*) AS result FROM {$table} $where GROUP BY $subject_field";
-          break;
-        default:
-          $query = "SELECT $subject_field AS subject, $calc_mode($value_field) AS result FROM {$table} $where GROUP BY $subject_field";
-          break;
+      $recalcfunc = str_replace(' ', '_', '_stats_calc_recalculate_'. strtolower($calc_mode));
+
+      // Use custom recalcfunc
+      if (function_exists($recalcfunc)) {
+        $vars = array(
+          'table' => $table,
+          'subject field' => $subject_field,
+          'value field' => $value_field,
+          'calc mode' => $calc_mode,
+          'settings' => $settings,
+          'op' => $op,
+          'subjects' => $subjects,
+          'additions' => $additions,
+          'current_values' => $current_values,
+          'query_where' => $where,
+          'query_args' => $args,
+        );
+        $res = call_user_func($recalcfunc, $vars);
+        // Func could return the concrete
+        if (is_array($res)) {
+          return $res;
+        }
+      }
+      else {
+        $query = "SELECT $subject_field AS subject, $calc_mode($value_field) AS result FROM {$table} $where GROUP BY $subject_field";
+        $res = db_query($query, $args);
       }
 
       $res = db_query($query, $args);
@@ -224,6 +245,23 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
 
       break;
   }
+}
+
+/**
+ * Recalculate functions.
+ *
+ * @param $vars
+ * @return
+ *  May return a query result handler that contains the columns subject and result,
+ *  or a completely calculated array of $subject => $value
+ */
+function _stats_calc_recalculate_count_rows($vars) {
+  $where = $vars['query_where'];
+  $args = $vars['query_args'];
+  $subject_field = $vars['subject field'];
+  $table = $vars['table'];
+  $query = "SELECT $subject_field AS subject, COUNT(*) AS result FROM {$table} $where GROUP BY $subject_field";
+  return db_query($query, $args);
 }
 
 /**
