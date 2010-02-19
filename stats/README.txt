@@ -52,3 +52,35 @@ Wording:
   * function that has a specific task to work on. In the default stats_worker
     there are used different callbacks:
     *
+
+
+Default stats_worker
+====================
+The default stats_worker can be overwritten by settings 'handler' in the
+specification array.
+
+
+Default callbacks for stats worker
+==================================
+stats_worker implements three different callbacks:
+* callback storage
+* callback calculation
+* callback storing calculation
+
+The default callbacks for that are:
+* stats_callback_default_storage
+* stats_callback_default_calculation
+* @TODO: stats_callback_default_storing_calculation
+
+The can be overwritten by setting 'callback storage', 'callback calculation' or
+'callback storing calculation' in the specifications array.
+
+
+stats_callback_default_calculation
+----------------------------------
+In stats_info array you can specifiy the 'calculation mode'. This defines the
+way new values ar calculated.
+- add
+- recalculate
+
+fall back on recalculate if no 'add' function exists.
