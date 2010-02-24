@@ -10,6 +10,10 @@ It's recommended to use stats_queue() for initializing stats derivation via Drup
 Queue (drupal.org/project/drupal_queue). Instant derivation could be called
 directly with calling stats_run().
 
+This module is designed in a way that allows you to seperate the collection of
+data that should be calculated, the actual calculation, and the storage of
+calculated values.
+
 There are three types of statistic creation/rebuilds:
 * add
 * rebuild single

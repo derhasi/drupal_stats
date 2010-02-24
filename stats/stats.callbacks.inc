@@ -85,7 +85,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
           //'type' => $type['type'],
           'value' => $line[$value_field],
           'line' => $line,
-          );
+        );
       }
       return $return;
     case 'insert':

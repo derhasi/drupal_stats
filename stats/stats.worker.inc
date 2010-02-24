@@ -95,6 +95,8 @@ class stats_worker {
   var $description; // Human readable description
   var $settings = array(); // Additional settings, e.g for storage and calc.
 
+  var $_reload = TRUE; // Indicator for if loading is necessary
+
   var $callbacks = array(
         'storage' => '',
         'calculation' => '',
@@ -135,6 +137,13 @@ class stats_worker {
   var $new_values = array();
 
   /**
+   * Existing values loaded via ->load().
+   */
+  var $current_values = array();
+
+  private $updated_values = array();
+
+  /**
    * Methods are listed below.
    */
 
@@ -161,8 +170,12 @@ class stats_worker {
    * Build the callback implementations for storage, calculation and storing
    * calculation.
    */
-  function initialize_callbacks (&$callbacks) {
-
+  function initialize_callbacks () {
+    $this->callbacks = array(
+      'storage' => $this->settings['callback storage'],
+      'calculation' => $this->settings['callback calculation'],
+      'storing calculation' => $this->settings['storing calculation'],
+    );
   }
 
   /**
@@ -180,6 +193,10 @@ class stats_worker {
    *   (optional) the addition that initiates the calculation
    */
   public function add_subject($subject, $addition = NULL) {
+    if (!in_array($subject, $this->subjects)) {
+      // Reload is needed for new subjects
+      $this->_reload = TRUE;
+    }
     // Add to subjects array
     $this->subjects[$subject] = $subject;
     // Add to new additions array
@@ -190,6 +207,7 @@ class stats_worker {
     else {
       $this->recalculate_subjects[$subject] = TRUE;
     }
+
   }
 
   /**
@@ -229,9 +247,39 @@ class stats_worker {
 
   /**
    * Load existing values for the defined subjects.
+   * @param $reload
+   *   force load of existing values with TRUE
    */
-  private function load() {
+  private function load($reload = FALSE) {
+    if ($this->_reload || $reload) {
+      $callback = $this->callbacks['storage'];
 
+      // Load all existing
+      if ($this->recalculate_all) {
+        $current_values = call_user_func($callback, 'load', $this->settings);
+      }
+      else {
+        $current_values = call_user_func($callback, 'load', $this->settings, $this->subjects);
+      }
+
+      // @TODO: maybe set $this->current_values_raw = $current_values;
+
+      // Reset current values
+      $this->current_values = array();
+      // Transform return array to simple key => value
+      foreach($current_values as $key => $item) {
+        if (is_array($item) && isset($item['subject'])) {
+          $subj = $item['subject'];
+          $val = $item['value'];
+          $this->current_values[$subj] = $val;
+        }
+        else {
+          $this->current_values[$key] = $item;
+        }
+      }
+    }
+    $this->_reload = FALSE;
+    return $this->current_values;
   }
 
   /**
@@ -239,13 +287,79 @@ class stats_worker {
    */
   public function calculate() {
 
+    $callback = $this->callbacks['calculation'];
+    $return = array();
+    // Recalculate all
+    if ($this->recalculate_all) {
+      $return = call_user_func($callback, 'recalculate all', $this->settings, $this->subjects, $this->additions);
+    }
+    // Else recalculate defined subjects
+    else {
+      if (count($this->recalculate_subjects)) {
+        $return = call_user_func($callback, 'recalculate all', $this->settings, $this->subjects, $this->additions);
+      }
+      // Process Additions for subjects that are not recalculated
+      if (count($this->additions)) {
+        $additions = array_diff_key($this->additions, $this->recalculate_subjects);
+        // less subjects to work on
+        $subjects = drupal_map_assoc(array_keys($additions));
+
+        // Addition needs current values
+        $this->load();
+
+        $return_additions = call_user_func($callback, 'recalculate all', $this->settings, $subjects, $this->additions, $this->current_values);
+        // Merge addition return with recalculate return
+        $return = array_merge($return, $return_additions);
+      }
+    }
+    // Set new_values
+    $this->new_values += $return;
+
+    // Define inserted and updated values
+    // This has to be done at this place and not in ->write(), because there may
+    // be a delay between calculate and write, that adds or removes subjects,
+    // so ->load would return out-of-date current_values.
+    $this->_updated_values();
+
+    return $return;
+  }
+
+  /**
+   * Retrieves the status (new = 0, or updated = 1) for stats that shall be
+   * written to database.
+   * This will use ->current_values and ->new_values to retrieve thhe status.
+   */
+  private function _updated_values() {
+    $this->updated_values = array();
+    $existing = array_intersect_key($this->new_values, $this->current_values);
+    $this->updated_values = $existing;
   }
 
   /**
    * Store actual calculation.
    */
   public function write() {
+    $callback = $this->settings['storage'];
+    // Get updated values (set in ->calculate / ->updated_values)
+    $kupdated = array_flip($this->updated_values);
 
+    $updated = array_intersect_key($this->new_values,$kupdated);
+    $new = array_diff_key($this->new_values, $kupdated);
+    $s_updated = drupal_map_assoc(array_keys($updated));
+    $s_new = drupal_map_assoc(array_keys($new));
+
+    // updated values
+    $ret1 = call_user_func($callback, 'update',  $this->settings, $s_updated, $updated);
+    // new values
+    $ret2 = call_user_func($callback, 'insert',  $this->settings, $s_new, $new);
+
+    $diff_success = count($this->new_values) - $ret1 - $ret2;
+
+    // Set new_values to empty, after write
+    $this->new_values = array();
+
+    // return TRUE if all values have been saved.
+    return !$diff_success;
   }
 
 }
