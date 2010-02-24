@@ -246,7 +246,18 @@ function stats_get_type($type) {
 }
 
 /**
- * Default alteration for adding views data and default values.
+ * Get the stats worker object for a given type.
+ * @param $type
+ *   string of type
+ * @return
+ *   stats_worker object (in interface stats_worker, e.g. stats_default_worker)
+ */
+function stats_get_worker($type) {
+  // @TODO:
+}
+
+/**
+ * Default alteration for adding handler, views data and default values.
  * @param $stats_types
  *  (by reference) array of stats types
  */
@@ -255,7 +266,7 @@ function _stats_info_alter(&$stats_types) {
 
     // Set default handler and default callbacks
     if (empty($type['handler'])) {
-      $type['handler'] = 'stats_worker';
+      $type['handler'] = 'stats_default_worker';
     }
 
     if (empty($type['callbacks'])) {
