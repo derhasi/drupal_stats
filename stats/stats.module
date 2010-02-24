@@ -222,7 +222,6 @@ function stats_types() {
     }
   }
 
-
   // additional handling for building views data & default values.
   _stats_info_alter($stats_types);
   // Let modules alter type definitions.

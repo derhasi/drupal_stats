@@ -2,10 +2,8 @@
 // $Id$
 /**
  * @file
- * Defines the basic handler interface.
+ * Defines the default stats worker.
  */
-
-
 
 /**
  * Structure of info array().
