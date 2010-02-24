@@ -1,9 +1,21 @@
 <?php
 // $Id$
+
 /**
  * @file
- * Defines the default stats worker.
+ * Defines the stats worker interface and default stats worker.
  */
+
+/**
+ * Interface for stats worker classes that may work for stats.module .
+ */
+interface stats_worker {
+  function __construct($info);
+  function execute();
+  function load($reload);
+  function calculate();
+  function write();
+}
 
 /**
  * Structure of info array().
@@ -86,7 +98,7 @@
   * - locked subjects
   * -
   */
-class stats_worker {
+class stats_default_worker {
   /**
    * Basic variables for this class.
    */
