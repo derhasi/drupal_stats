@@ -15,6 +15,8 @@ interface stats_worker {
   function load($reload);
   function calculate();
   function write();
+  function add_subject($subject, $addition);
+  function recalculate_all();
 }
 
 /**
