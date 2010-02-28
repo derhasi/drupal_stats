@@ -1,0 +1,8 @@
+; $Id$
+name = Stats Queue
+description = Queue processing of stats runs
+core = 6.x
+version = dev
+package = "Stats"
+dependencies[] = stats
+dependencies[] = drupal_queue

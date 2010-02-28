@@ -1,0 +1,44 @@
+<?php
+
+/**
+ * @file
+ *   Queue implemenatation for stats calls
+ */
+
+/**
+ * Queues the creation of stats runs.
+ *
+ * Functionality is driven by job_queue.module.
+ * @param $type
+ * @param $subject
+ * @param $addition
+ * @return
+ */
+function stats_queue($type, $subject = NULL, $addition = NULL) {
+  drupal_queue_include();
+  $queue = DrupalQueue::get('stats');
+  $item = array(
+    'type' => $type,
+    'subject' => $subject,
+    'addition' => $addition,
+  );
+  return $queue->createItem($item);
+}
+
+/**
+ * Implementation of hook_cron_queue_info().
+ */
+function stats_queue_cron_queue_info() {
+  $queues['stats'] = array(
+    'worker callback' => 'stats_queue_worker_callback',
+    'time' => 60,
+  );
+  return $queues;
+}
+
+/**
+ * Runs the item via stats_run.
+ */
+function stats_queue_worker_callback($item) {
+  return stats_run($item['type'], $item['subject'], $item['addition']);
+}
