@@ -1,0 +1,20 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *  Tests for stats.module
+ */
+
+class StatsTestCase extends DrupalWebTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Stats functionality'),
+      'description' => t('Test default calc.'),
+      'group' => t('Stats'),
+    );
+  }
+}
