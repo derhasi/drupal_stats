@@ -142,6 +142,9 @@ function stats_worker_info() {
   static $worker_info;
 
   if (!$worker_info) {
+    // Implement interface
+    module_load_include('inc', 'stats', 'stats.worker');
+    // Get worker info
     $worker_info = module_invoke_all('stats_worker_info');
   }
   return $worker_info;
@@ -175,6 +178,7 @@ function _stats_worker_prepare($handler) {
     if (isset($worker_info[$handler]['extends'])) {
       return _stats_worker_prepare($worker_info[$handler]['extends']);
     }
+
     // Handler found, no parent to be loaded
     return TRUE;
   }
@@ -345,7 +349,7 @@ function _stats_info_alter(&$stats_info) {
 function stats_stats_worker_info() {
   return array(
     'stats_default_worker' => array(
-      'file' => drupal_get_path('moduel', 'stats') .'/stats.worker.inc',
+      'file' => drupal_get_path('moduel', 'stats') .'/stats_default_worker.inc',
     ),
   );
 }
