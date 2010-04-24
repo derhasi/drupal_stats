@@ -138,11 +138,11 @@ function stats_info() {
 /**
  * Retrieve all defined stats worker.
  */
-function stats_worker() {
+function stats_worker_info() {
   static $worker_info;
 
   if (!$worker_info) {
-    $worker_info = module_invoke_all('stats_worker');
+    $worker_info = module_invoke_all('stats_worker_info');
   }
   return $worker_info;
 }
@@ -156,7 +156,7 @@ function stats_worker() {
  *   TRUE if all specified files and handlers could be loaded
  */
 function _stats_worker_prepare($handler) {
-  $worker_info = stats_worker();
+  $worker_info = stats_worker_info();
 
   $return = FALSE;
   // Handler was found
@@ -337,6 +337,17 @@ function _stats_info_alter(&$stats_info) {
       }
     }
   }
+}
+
+/**
+ * Implementation of hook_stats_worker_info().
+ */
+function stats_stats_worker_info() {
+  return array(
+    'stats_default_worker' => array(
+      'file' => drupal_get_path('moduel', 'stats') .'/stats.worker.inc',
+    ),
+  );
 }
 
 /**
