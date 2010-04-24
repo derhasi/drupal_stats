@@ -136,6 +136,53 @@ function stats_info() {
 }
 
 /**
+ * Retrieve all defined stats worker.
+ */
+function stats_worker() {
+  static $worker_info;
+
+  if (!$worker_info) {
+    $worker_info = module_invoke_all('stats_worker');
+  }
+  return $worker_info;
+}
+
+/**
+ * Load all necessary files for stats worker to be loaded.
+ * @param $handler
+ *  string name of the stats_worker class.
+ *
+ * @return
+ *   TRUE if all specified files and handlers could be loaded
+ */
+function _stats_worker_prepare($handler) {
+  $worker_info = stats_worker();
+
+  $return = FALSE;
+  // Handler was found
+  if (isset($worker_info[$handler])) {
+    // Load file
+    if (isset($worker_info[$handler]['file'])) {
+      if (is_file('./'. $worker_info[$handler]['file'])) {
+        require_once './'. $type['file'];
+      }
+      else {
+        watchdog('stats', '%file could not be loaded for stats_worker %handler.', array('%handler' => $handler, '%file' => $worker_info[$handler]['file']));
+        return FALSE;
+      }
+    }
+    // Load parent class
+    if (isset($worker_info[$handler]['extends'])) {
+      return _stats_worker_prepare($worker_info[$handler]['extends']);
+    }
+    // Handler found, no parent to be loaded
+    return TRUE;
+  }
+  // No handler found
+  return FALSE;
+}
+
+/**
  * Return a single stats type sepcification.
  * @param $type
  *   type id
@@ -158,7 +205,7 @@ function stats_get_type_info($type) {
  *   stats_worker object (in interface stats_worker, e.g. stats_default_worker)
  */
 function stats_get_worker($type) {
-    $info = stats_get_type_info($type);
+  $info = stats_get_type_info($type);
   // Check definition
   if (!is_array($info)) {
     watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
@@ -180,8 +227,11 @@ function stats_get_worker($type) {
   }
 
   // Load stats worker
-  $worker = new $info['handler']($info);
-  return $worker;
+  if (_stats_worker_prepare($info['handler'])) {
+    $worker = new $info['handler']($info);
+    return $worker;
+  }
+  return FALSE;
 }
 
 /**
