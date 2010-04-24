@@ -7,7 +7,7 @@
  */
 
 /**
- * Interface for stats worker classes that may work for stats.module .
+ * Interface for stats worker classes that may work for stats.module.
  */
 interface stats_worker {
   function __construct($info);
@@ -16,7 +16,7 @@ interface stats_worker {
   function calculate();
   function write();
   function add_subject($subject, $addition);
-  function recalculate_all();
+  function add_all();
 }
 
 /**
@@ -221,15 +221,14 @@ class stats_default_worker {
     else {
       $this->recalculate_subjects[$subject] = TRUE;
     }
-
   }
 
   /**
-   * Recalculate all values for the defined stats type.
+   * Sets all subjects to get recalculated.
    */
-  public function recalculate_all() {
+  public function add_all() {
     $this->recalculate_all = TRUE;
-    return $this->calculate();
+    return TRUE;
   }
 
   /**
@@ -264,7 +263,7 @@ class stats_default_worker {
    * @param $reload
    *   force load of existing values with TRUE
    */
-  private function load($reload = FALSE) {
+  public function load($reload = FALSE) {
     if ($this->_reload || $reload) {
       $callback = $this->callbacks['storage'];
 

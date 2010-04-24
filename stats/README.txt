@@ -14,11 +14,12 @@ This module is designed in a way that allows you to seperate the collection of
 data that should be calculated, the actual calculation, and the storage of
 calculated values.
 
-There are three types of statistic creation/rebuilds:
+There are three modes of statistic creation/rebuilds:
 * add
 * rebuild single
 * rebuild all
 @TODO: description
+
 
 
 Wording:
