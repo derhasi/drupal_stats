@@ -35,7 +35,7 @@ function stats_example_stats_info() {
     'storage value field' => 'value',
     'storage type field' => 'type',
 
-    //'extra' => ,
+    // @TODO: Views implementation
     'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
     'views field declared' => FALSE, // FALSE default,
 
