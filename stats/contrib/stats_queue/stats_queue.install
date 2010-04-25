@@ -1,0 +1,58 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   information for install, update and enable stats
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function stats_queue_install(){
+  drupal_install_schema('stats_queue');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function stats_queue_uninstall(){
+  drupal_uninstall_schema('stats_queue');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function stats_queue_schema() {
+  return array(
+    'stats_queue' => array(
+      'fields' => array(
+        'type' => array(
+          'type' => 'varchar',
+          'length' => 60,
+          'not null' => TRUE,
+          'default' => '',
+          'description' => 'Type of stats value',
+        ),
+        'subject' => array(
+          'description' => 'one subject to get calculated - may be serialized',
+          'type' => 'text',
+          'size' => 'normal',
+          'not null' => FALSE,
+          'serialize' => TRUE,
+        ),
+        'addition' => array(
+          'description' => 'one optional addition to get calculated with subject',
+          'type' => 'text',
+          'size' => 'medium',
+          'not null' => FALSE,
+          'serialize' => TRUE,
+        ),
+      ),
+      'indexes' => array(
+        'type' => array('type'),
+        'subject' => array('subject(30)'),
+      ),
+    ),
+  );
+}

@@ -8,21 +8,88 @@
 /**
  * Queues the creation of stats runs.
  *
- * Functionality is driven by job_queue.module.
+ * Functionality is driven by drupal_queue.module.
  * @param $type
  * @param $subject
  * @param $addition
  * @return
  */
-function stats_queue($type, $subject = NULL, $addition = NULL) {
-  drupal_queue_include();
-  $queue = DrupalQueue::get('stats');
-  $item = array(
-    'type' => $type,
-    'subject' => $subject,
-    'addition' => $addition,
-  );
-  return $queue->createItem($item);
+function stats_queue($type, $subjects = NULL, $additions = NULL) {
+
+  // Write data to {stats_queue}
+
+  $subjects = array_values($subjects);
+  $additions = array_values($additions);
+
+  // recalculate all
+  if (!isset($subjects)) {
+    $query = "DELETE FROM {stats_queue} WHERE type = '%s'";
+    db_query($query, $type);
+    $write = (object) array(
+      'type' => $type,
+      'subject' => NULL,
+      'addition' => NULL,
+    );
+    drupal_write_record('stats_queue', $write);
+  }
+  // Calculate specific subjects
+  else {
+    $recalculate = array();
+    $add = array();
+    if (!isset($additions)) {
+      $recalculate = $subjects;
+      $add = array();
+    }
+    elseif (!is_array($additions)) {
+      $add = $subjects;
+      $additions = array_fill(0, count($subjects), $additions);
+      $recalculate = array();
+    }
+    else {
+      $ca = count($additions);
+      $add = array_slice($subjects, 0, $ca, TRUE);
+      $recalculate = array_slice($subjects, $ca);
+    }
+
+    // Add addition subjects
+    if (count($add)) {
+      foreach ($add as $i => $a) {
+        $addition = $additions[$i];
+        $write = (object) array(
+          'type' => $type,
+          'subject' => $a,
+          'addition' => $addition,
+        );
+        drupal_write_record('stats_queue', $write);
+      }
+    }
+
+    // Add subjects for recalcualtion
+    if (count($recalculate)) {
+      // Delete existing
+      $args = array($type);
+      $casts = array();
+      $writes = array();
+      foreach ($recalculate as $rec) {
+        $args[] = serialize($rec);
+        $casts[] = "'%s'";
+        $writes[] = array(
+          'type' => $type,
+          'subject' => $rec,
+          'addition' => NULL,
+        );
+      }
+      $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND subject IN (". implode(',', $casts) .")";
+      db_query($query, $args);
+      foreach ($writes as $write) {
+        drupal_write_record('stats_queue', $write);
+      }
+    }
+  }
+
+  // Activate queue for type
+  $queue = drupal_queue_get('stats');
+  return $queue->createItem($type);
 }
 
 /**
@@ -39,6 +106,45 @@ function stats_queue_cron_queue_info() {
 /**
  * Runs the item via stats_run.
  */
-function stats_queue_worker_callback($item) {
-  return stats_run($item['type'], $item['subject'], $item['addition']);
+function stats_queue_worker_callback($type) {
+
+  // Load all data to process from stats_queue, then delete it
+  $query = "SELECT * FROM {stats_queue} WHERE type = '%s'";
+  $res = db_query($query, $type);
+  $items = array();
+  $recalculate_all = FALSE;
+  $recalc = array();
+  $adds = array();
+  while ($obj = db_fetch_object($res)){
+    $subject = unserialize($obj->subject);
+    $addition = unserialize($obj->addition);
+    if (!isset($subject)) {
+      $recalculate_all = TRUE;
+      break;
+    }
+    elseif (!isset($addition)) {
+      $recalc[] = $subject;
+    }
+    else {
+      $adds[] = (object) array('subject' => $subject, 'addition' => $addition);
+    }
+  }
+  // DELETE all of type
+  db_query("DELETE FROM {stats_queue} WHERE type ='%s'", $type);
+
+  $worker = stats_get_worker($type);
+
+  if ($recalculate_all) {
+    $worker->add_all();
+  }
+  else {
+    foreach ($recalc as $rec) {
+      $worker->add_subject($rec);
+    }
+    foreach ($adds as $add) {
+      $worker->add_subject($add->subject, $add->addition);
+    }
+  }
+
+  return $worker->execute();
 }
