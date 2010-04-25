@@ -177,7 +177,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   $table = $settings['source table'];
   $subject_field = $settings['source subject field'];
   $value_field = $settings['source value field'];
-  $calc_mode = strtoupper($settings['calculation mode']);
+  $calc_mode = ($settings['calculation mode']) ? strtoupper($settings['calculation mode']) : 'COUNT';
 
   // copy current values for return
   $return = $current_values;
@@ -217,7 +217,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
           'table' => $table,
           'subject field' => $subject_field,
           'value field' => $value_field,
-          'calc mode' => $calc_mode,
+          'calculation mode' => $calc_mode,
           'settings' => $settings,
           'op' => $op,
           'subjects' => $subjects,
