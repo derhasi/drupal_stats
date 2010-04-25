@@ -43,15 +43,16 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
   $table = $settings['storage table'];
   $subject_field = $settings['storage subject field'];
   $type_field = $settings['storage type field'];
-  $value_field = $type['storage value field'];
-  $extra =  $type['storage extra'];
+  $value_field = $settings['storage value field'];
+  //$extra = $settings['storage extra']; @TODO
+  // Ensure subjects to be in array
   if (isset($subjects) && !is_array($subjects)) {
     $subjects = array($subjects);
   }
 
   switch ($op) {
     case 'load':
-      $query = "SELECT * FROM {$table}";
+      $query = 'SELECT * FROM {'. $table .'}';
       $args = array();
 
       // Restrict load on specified subjects
@@ -59,7 +60,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
         $cast_subject = _stats_column_type_conversion_helper($table, $subject_field);
         $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
         $where = "($where)";
-        $args = $subjects;
+        $args = array_merge($args, $subjects);
       }
 
       // Add type column to check in query
@@ -67,7 +68,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
         if ($where) {
           $where .= ' AND ';
         }
-        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);// @TODO: retrieve type conversion from schema
+        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);
         $args[] = $settings['type'];
       }
 
@@ -100,7 +101,13 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
             $value_field => $new_values[$subject],
           );
         }
-        $return += drupal_write_record($table,$obj) / SAVED_NEW;
+        else {
+          $obj = (object) array(
+            $subject_field => $subject,
+            $value_field => $new_values[$subject],
+          );
+        }
+        $return += drupal_write_record($table, $obj) / SAVED_NEW;
       }
       return (count($subjects) == $return);
     case 'update':
@@ -120,7 +127,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
           );
         }
         // divide by constant to retrieve succesfull calls, as SAVED_UPDATED = 2
-        $return += drupal_write_record($table,$obj, $update) / SAVED_UPDATED;
+        $return += drupal_write_record($table, $obj, $update) / SAVED_UPDATED;
       }
       return (count($subjects) == $return);
     case 'delete':
@@ -177,7 +184,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   $table = $settings['source table'];
   $subject_field = $settings['source subject field'];
   $value_field = $settings['source value field'];
-  $calc_mode = strtoupper($settings['calculation mode']);
+  $calc_mode = ($settings['calculation mode']) ? strtoupper($settings['calculation mode']) : 'COUNT';
 
   // copy current values for return
   $return = $current_values;
@@ -191,15 +198,22 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   }
 
   $args = array();
-  // @TODO
+
   switch ($op) {
     case 'add':
       foreach ($subjects as $subject) {
-        $return[$subject] = call_user_func($addfunc, $current_values[$subject], $additions[$subject]);
+        if (isset($additions[$subject])) {
+          if (isset($current_values[$subject])) {
+            $return[$subject] = call_user_func($addfunc, $additions[$subject], $current_values[$subject]);
+          }
+          else {
+            $return[$subject] = call_user_func($addfunc, $additions[$subject]);
+          }
+        }
       }
       return $return;
     case 'recalculate':
-      // no Subjects no calculation, return uncalulated current values
+      // no Subjects no calculation, return uncalculated current values
       if (!count($subjects)) {
         return $return;
       }
@@ -217,7 +231,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
           'table' => $table,
           'subject field' => $subject_field,
           'value field' => $value_field,
-          'calc mode' => $calc_mode,
+          'calculation mode' => $calc_mode,
           'settings' => $settings,
           'op' => $op,
           'subjects' => $subjects,
@@ -227,17 +241,18 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
           'query_args' => $args,
         );
         $res = call_user_func($recalcfunc, $vars);
-        // Func could return the concrete
+        // Func could return the concrete return array
         if (is_array($res)) {
           return $res;
         }
       }
+      // Execute default query
       else {
         $query = "SELECT $subject_field AS subject, $calc_mode($value_field) AS result FROM {$table} $where GROUP BY $subject_field";
         $res = db_query($query, $args);
       }
 
-      $res = db_query($query, $args);
+      // Evaluate result resource (either from default query or custom recalcfunc)
       while ($item = db_fetch_object($res)) {
         $return[$item->subject] = $item->result;
       }
@@ -267,18 +282,24 @@ function _stats_calc_recalculate_count_rows($vars) {
 /**
  * Add calc functions
  */
-function _stats_calc_add_count($old_value, $additions) {
+function _stats_calc_add_count($additions, $old_value = 0) {
   return $old_value + count($additions);
 }
-function _stats_calc_add_count_rows($old_value, $additions) {
+function _stats_calc_add_count_rows($additions, $old_value = 0) {
   return $old_value + count($additions);
 }
-function _stats_calc_add_sum($old_value, $additions) {
+function _stats_calc_add_sum($additions, $old_value = 0) {
   return $old_value + sum($additions);
 }
-function _stats_calc_add_min($old_value, $additions) {
+function _stats_calc_add_min($additions, $old_value = NULL) {
+  if (!isset($old_value)) {
+    return min($additions);
+  }
   return min($old_value, min($additions));
 }
-function _stats_calc_add_max($old_value, $additions) {
+function _stats_calc_add_max($additions, $old_value = NULL) {
+  if (!isset($old_value)) {
+    return max($additions);
+  }
   return max($old_value, max($additions));
 }

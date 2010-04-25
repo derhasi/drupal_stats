@@ -8,123 +8,69 @@
  *  database table
  */
 
-require_once 'stats.callbacks.inc';
 
 /**
  * Updates or creates stats for the given stats type, eventually specified with
  * a single subject to update for, or a new value for the given subject, to
- * avoid a maybe performance lack
+ * avoid a maybe performance lack.
  *
  * @param $type
  *  stats type - defined by module or stored in database
- * @param $subject
- *  (optional) specific subject to rebuild the value for a specific subject
- * @param $addition
- *  (optional) value that was instantly added, needed to create data updates,
- *  without doing a rebuild
+ * @param $subjects
+ *  (optional) specific subjects to add or recalculate stats for.
+ * @param $additions
+ *  (optional) addition values for subjects in given order
  * @param $return_values
- *  (optional) default: FALSE, on TRUE this will return the derived values as
- *  an array. Data won't be stored.
+ *  (optional) default: FALSE, on TRUE this will return the derived values
+ *  an array instead of storing.
  * @return
  *  Returns FALSE if run was not successfull.
  */
-function stats_run($type, $subject = NULL, $addition = NULL, $return_values = FALSE) {
-  $type = stats_get_type($type);
-  // Check definition
-  if (!is_array($type)) {
-    watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
-    return FALSE;
-  }
-  // Check active state
-  elseif (!$type['active']) {
-    watchdog('stats', 'Stats type %type is not activated.', array('%type' => $type), WATCHDOG_WARNING);
-    return FALSE;
-  }
+function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = FALSE) {
+  $worker = stats_get_worker($type);
 
-  // Load type's modulename.stats.inc
-  if (isset($type['module'])) {
-    module_load_include('inc', $type['module'], $type['module'] .'.stats');
+  // recalculate all for no given subject
+  if (!isset($subjects)) {
+    $worker->add_all();
   }
-  // Load defined additional file
-  if (isset($type['file']) && is_file('./'. $type['file'])) {
-    require_once './'. $type['file'];
-  }
-
-  // Callback definitions
-  $callback_load = $type['storage']['callback']['load'];
-  $callback_write = $type['storage']['callback']['write'];
-  $callback_derivation = $type['derivation']['callback'];
-  $callback_d_and_s = $type['derivation & storage']['callback'];
-
-  // TYPE + SUBJECT + NEW_VALUE
-  if (isset($addition)) {
-    // Derive plus store
-    if (!$return_values && isset($callback_d_and_s['add'])) {
-      return $callback_d_and_s['add']($type, $subject, $addition);
-    }
-    // Derive then store
-    elseif ($callback_load && ($callback_write || $return_values) && isset($callback_derivation['add'])) {
-      // Skip load
-      if (in_array('add', $type['derivation']['skip load'])) {
-        $old_values = NULL;
+  else {
+    // Single subject
+    if (!is_array($subjects)) {
+      if (isset($additions)) {
+        $worker->add_subject($subjects, $additions);
       }
       else {
-        // Get old values
-        $old_values = $callback_load($type, $subject, $addition);
+        $worker->add_subject($subjects);
       }
-
-      // Derive new values
-      $values = $callback_derivation['add']($type, $old_values, $subject, $addition);
-      if ($return_values) return $values;
-      return $callback_write($type, $values, $subject, $addition);
     }
-  }
-
-  // TYPE + SUBJECT: Fall back on only subject level
-  if (isset($subject)) {
-    // Derive plus store
-    if (!$return_values && isset($callback_d_and_s['rebuild single'])) {
-      return $callback_d_and_s['rebuild single']($type, $subject);
-    }
-    // Derive then store
-    elseif (($storage || $return_values) && isset($callback_derivation['rebuild single'])) {
-      // Skip load
-      if (in_array('rebuild single', $type['derivation']['skip load'])) {
-        $old_values = NULL;
-      }
-      else {
-        // Get old values
-        $old_values = $callback_load($type, $subject);
-      }
-      // Derive new values
-      $values = $callback_derivation['rebuild single']($type, $old_values, $subject);
-      if ($return_values) return $values;
-      return $callback_write($type, $values, $subject);
-    }
-  }
-
-  // TYPE: fall back on no-subject level
-  // Derive plus store
-  if (!$return_values && isset($callback_d_and_s['rebuild all'])) {
-    return $callback_d_and_s['rebuild all']($type);
-  }
-  // Derive then store
-  elseif (($storage || $return_values) && isset($callback_derivation['rebuild all'])) {
-    // Skip load
-    if (in_array('rebuild all', $type['derivation']['skip load'])) {
-      $old_values = NULL;
-    }
+    // Array of subjects
     else {
-      // Get old values
-      $old_values = $callback_load($type);
+      // Single addition is set to all subjects
+      if (!is_array($additions)) {
+        $additions = array_fill(0, count($subjects), $additions);
+      }
+      // Prepare for foreach count
+      $subjects = array_values($subjects);
+      $additions = array_values($additions);
+      foreach($subjects as $i => $subject) {
+        if (!isset($additions[$i])) {
+          $worker->add_subject($subject, $additions[$i]);
+        }
+        else {
+          $worker->add_subject($subject);
+        }
+      }
     }
-    // Derive new values
-    $values = $callback_derivation['rebuild all']($type, $old_values);
-    if ($return_values) return $values;
-    return $callback_write($type, $values);
   }
-  watchdog('stats', 'There could not be found a valid callback for type %type, subject $subject, addition %addition (return value: %return_values)', array('%type' => $type['type'], '%subject' => $subject, '%addition' => $addition, '%return_values' => $return_values), WATCHDOG_ERROR);
-  return FALSE;
+
+  // Return values does not store calculated values.
+  if ($return_values) {
+    return $worker->calculate();
+  }
+  // Calcualate and store values.
+  else {
+    return $worker->execute();
+  }
 }
 
 /**
@@ -133,19 +79,29 @@ function stats_run($type, $subject = NULL, $addition = NULL, $return_values = FA
  *   type of the stat
  * @param $subject
  *   id of the subject to return value(s) for
- * @param $only_value
- *   will return only the value of value column if set to TRUE
- *   else will return the whole stat array (subject, type, value, data, ...)
  * @return
  *  array of stats value arrays
  */
-function stats_load($type, $subject = NULL, $only_value = TRUE) {
-  $type = stats_get_type($type);
-  if ($type) {
-    $return = call_user_func($type['storage']['load'], $type, $subject);
-    return $return;
+function stats_load($type, $subjects = NULL) {
+  $worker = stats_get_worker($type);
+
+  // recalculate all for no given subject
+  if (!isset($subjects)) {
+    $worker->add_all();
   }
-  return FALSE;
+  else {
+    // Single subject
+    if (!is_array($subjects)) {
+      $worker->add_subject($subjects, $additions);
+    }
+    else {
+      foreach($subjects as $subject) {
+        $worker->add_subject($subject);
+      }
+    }
+  }
+
+  return $worker->load();
 }
 
 /**
@@ -153,12 +109,12 @@ function stats_load($type, $subject = NULL, $only_value = TRUE) {
  * @return
  *   Array of type definitions
  */
-function stats_types() {
-  static $stats_types;
-  if (isset($stats_types)) return $stats_types;
+function stats_info() {
+  static $stats_info;
+  if (isset($stats_info)) return $stats_info;
 
   $modules = module_implements('stats_info');
-  $stats_types = array();
+  $stats_info = array();
   foreach ($modules as $module) {
     $invoked = module_invoke($module, 'stats_info');
     foreach ($invoked as $key => $type) {
@@ -169,33 +125,84 @@ function stats_types() {
       // Avoid missing 'type' definition
       if (!isset($type['type'])) {
         $type['type'] = $key;
-        $stats_types[$key] = $type;
+        $stats_info[$key] = $type;
       }
       else {
-        $stats_types[$type['type']] = $type;
+        $stats_info[$type['type']] = $type;
       }
     }
   }
 
   // additional handling for building views data & default values.
-  _stats_info_alter($stats_types);
+  _stats_info_alter($stats_info);
   // Let modules alter type definitions.
-  drupal_alter('stats_info', $stats_types);
+  drupal_alter('stats_info', $stats_info);
 
-  return $stats_types;
+  return $stats_info;
 }
 
 /**
- * Return a single stats type info.
+ * Retrieve all defined stats worker.
+ */
+function stats_worker_info() {
+  static $worker_info;
+
+  if (!$worker_info) {
+    // Implement interface
+    module_load_include('inc', 'stats', 'stats.worker');
+    // Get worker info
+    $worker_info = module_invoke_all('stats_worker_info');
+  }
+  return $worker_info;
+}
+
+/**
+ * Load all necessary files for stats worker to be loaded.
+ * @param $handler
+ *  string name of the stats_worker class.
+ *
+ * @return
+ *   TRUE if all specified files and handlers could be loaded
+ */
+function _stats_worker_prepare($handler) {
+  $worker_info = stats_worker_info();
+
+  $return = FALSE;
+  // Handler was found
+  if (isset($worker_info[$handler])) {
+    // Load file
+    if (isset($worker_info[$handler]['file'])) {
+      if (is_file('./'. $worker_info[$handler]['file'])) {
+        require_once './'. $worker_info[$handler]['file'];
+      }
+      else {
+        watchdog('stats', '%file could not be loaded for stats_worker %handler.', array('%handler' => $handler, '%file' => $worker_info[$handler]['file']));
+        return FALSE;
+      }
+    }
+    // Load parent class
+    if (isset($worker_info[$handler]['extends'])) {
+      return _stats_worker_prepare($worker_info[$handler]['extends']);
+    }
+
+    // Handler found, no parent to be loaded
+    return TRUE;
+  }
+  // No handler found
+  return FALSE;
+}
+
+/**
+ * Return a single stats type sepcification.
  * @param $type
  *   type id
  * @return
  *   stats type info array
  */
-function stats_get_type($type) {
-  $stats_types = stats_types();
-  if (isset($stats_types[$type])) {
-    return $stats_types[$type];
+function stats_get_type_info($type) {
+  $stats_info = stats_info();
+  if (isset($stats_info[$type])) {
+    return $stats_info[$type];
   }
   return FALSE;
 }
@@ -208,47 +215,46 @@ function stats_get_type($type) {
  *   stats_worker object (in interface stats_worker, e.g. stats_default_worker)
  */
 function stats_get_worker($type) {
-  // @TODO:
+  $info = stats_get_type_info($type);
+  // Check definition
+  if (!is_array($info)) {
+    watchdog('stats', 'Stats type %type is not defined.', array('%type' => $type), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  // Check active state
+  elseif (!$info['active']) {
+    watchdog('stats', 'Stats type %type is not activated.', array('%type' => $type), WATCHDOG_WARNING);
+    return FALSE;
+  }
+
+  // Load type's modulename.stats.inc
+  if (isset($info['module'])) {
+    module_load_include('inc', $info['module'], $info['module'] .'.stats');
+  }
+  // Load defined additional file
+  if (isset($info['file']) && is_file('./'. $info['file'])) {
+    require_once './'. $info['file'];
+  }
+
+  // Load stats worker
+  if (_stats_worker_prepare($info['handler'])) {
+    $worker = new $info['handler']($info);
+    return $worker;
+  }
+  return FALSE;
 }
 
 /**
  * Default alteration for adding handler, views data and default values.
- * @param $stats_types
+ * @param $stats_info
  *  (by reference) array of stats types
  */
-function _stats_info_alter(&$stats_types) {
-  foreach ($stats_types as $key => $type) {
+function _stats_info_alter(&$stats_info) {
+  foreach ($stats_info as $key => $type) {
 
     // Set default handler and default callbacks
     if (empty($type['handler'])) {
       $type['handler'] = 'stats_default_worker';
-    }
-
-    if (empty($type['callbacks'])) {
-      $type['callbacks'] = array(
-        'storage' => 'stats_callback_default_storage',
-        'calcualtion' => 'stats_callback_default_calculation',
-        'storing calcualtion' => 'stats_callback_default_storing_calculation',
-      );
-    }
-    elseif (!is_array($type['callbacks'])) {
-      $callback = $type['callbacks'];
-      $type['callbacks'] = array(
-        'storage' => $callback,
-        'calculation' => $callback,
-        //'storing calculation' => $callback,
-      );
-    }
-
-
-    // Set default derivation callbacks
-    if (empty($type['derivation']['callback'])) {
-      $type['derivation']['callback'] = array(
-        'add' => 'stats_callback_derivation_add',
-        'rebuild single' => 'stats_callback_derivation_rebuild_single',
-        'rebuild all' => 'stats_callback_derivation_rebuild_all',
-        'skip load' => array('rebuild single', 'rebuild all'),
-      );
     }
 
     // Set views data, if no is set
@@ -266,13 +272,13 @@ function _stats_info_alter(&$stats_types) {
       // TODO: more generic views data build, that also recognizes existing tables
       // Define table if it is not allready declared.
       if (!$type['storage']['views table declared']) {
-        $stats_types[$key]['views data'][$table]['table'] = array(
+        $stats_info[$key]['views data'][$table]['table'] = array(
           'group' => t('Stats'),
         );
       }
 
       // Relation
-      $stats_types[$key]['views data alter'][$base_table]['stats_'. $type_id] = array(
+      $stats_info[$key]['views data alter'][$base_table]['stats_'. $type_id] = array(
         'real field' => $base_field,
         'title' => t('Stats: @base to @type', array('@base' => $base_table, '@type' => $type_id)),
         'help' => $item['help'],
@@ -295,7 +301,7 @@ function _stats_info_alter(&$stats_types) {
 
       // Define field, if it is not allready declared.
       if (!$type['storage']['views field declared']) {
-        $stats_types[$key]['views data'][$table][$col_value] = array(
+        $stats_info[$key]['views data'][$table][$col_value] = array(
           'title' => t('Stats @stats_type_name value', array('@stats_type_name' => $type['name'])),
           'help' => t('Value stats type @stats_type_name', array('@stats_type_name' => $type['name'])),
           'field' => array(
@@ -318,6 +324,17 @@ function _stats_info_alter(&$stats_types) {
 }
 
 /**
+ * Implementation of hook_stats_worker_info().
+ */
+function stats_stats_worker_info() {
+  return array(
+    'stats_default_worker' => array(
+      'file' => drupal_get_path('module', 'stats') .'/stats_default_worker.inc',
+    ),
+  );
+}
+
+/**
  * Implementation of hook_views_api().
  */
 function stats_views_api() {
@@ -334,7 +351,7 @@ function _stats_column_type_conversion_helper($table, $field) {
   static $conv;
   if (!isset($conv[$table][$field])) {
     $schema = drupal_get_schema($table);
-    $conv[$table] = db_type_placeholder($schema['fields'][$field]['type']);
+    $conv[$table][$field] = db_type_placeholder($schema['fields'][$field]['type']);
   }
   return $conv[$table][$field];
 }
