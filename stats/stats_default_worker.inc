@@ -286,19 +286,15 @@ class stats_default_worker {
     // first calculate then store
     if (!$this->callbacks['storing calculation']) {
       $this->calculate();
-      $this->write();
+      return $this->write();
     }
     // @TODO: implement storing calculation callback
     else {
-
       if ($this->recalculate_all == TRUE) {
-
       }
       else {
-
       }
     }
-
   }
 
   /**
@@ -324,7 +320,7 @@ class stats_default_worker {
       $this->current_values = array();
       // Transform return array to simple key => value
       foreach($current_values as $key => $item) {
-        if (is_array($item) && isset($item['subject']) && isset($item['value'])) {
+        if (is_array($item) && isset($item['subject'])) {
           $subj = $item['subject'];
           $val = $item['value'];
           $this->current_values[$subj] = $val;
@@ -397,10 +393,10 @@ class stats_default_worker {
   public function write() {
     $callback = $this->callbacks['storage'];
     // Get updated values (set in ->calculate / ->updated_values)
-    $keys_updated = array_flip($this->updated_values);
+    $cur_updated = $this->updated_values;
 
-    $updated = array_intersect_key($this->new_values, $keys_updated);
-    $new = array_diff_key($this->new_values, $keys_updated);
+    $updated = array_intersect_key($this->new_values, $cur_updated);
+    $new = array_diff_key($this->new_values, $cur_updated);
     $subjects_updated = drupal_map_assoc(array_keys($updated));
     $subjects_new = drupal_map_assoc(array_keys($new));
 

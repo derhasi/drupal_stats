@@ -39,11 +39,13 @@ function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = 
     if (!is_array($subjects)) {
       $worker->add_subject($subjects, $additions);
     }
+    // Array of subjects
     else {
-      // Prepare both for foreach
+      // Single addition is set to all subjects
       if (!is_array($additions)) {
         $additions = array_fill(0, count($subjects), $additions);
       }
+      // Prepare for foreach count
       $subjects = array_values($subjects);
       $additions = array_values($additions);
       foreach($subjects as $i => $subject) {

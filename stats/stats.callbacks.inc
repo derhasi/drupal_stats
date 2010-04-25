@@ -44,7 +44,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
   $subject_field = $settings['storage subject field'];
   $type_field = $settings['storage type field'];
   $value_field = $settings['storage value field'];
-  $extra = $settings['storage extra'];
+  //$extra = $settings['storage extra']; @TODO
   // Ensure subjects to be in array
   if (isset($subjects) && !is_array($subjects)) {
     $subjects = array($subjects);
@@ -127,7 +127,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
           );
         }
         // divide by constant to retrieve succesfull calls, as SAVED_UPDATED = 2
-        $return += drupal_write_record($table,$obj, $update) / SAVED_UPDATED;
+        $return += drupal_write_record($table, $obj, $update) / SAVED_UPDATED;
       }
       return (count($subjects) == $return);
     case 'delete':
