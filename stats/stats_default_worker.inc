@@ -165,18 +165,74 @@ class stats_default_worker {
     // @TODO: add error handling for missing values.
     $this->settings = $info;
     $this->initialize_callbacks();
+    $this->load_files();
   }
 
   /**
    * Build the callback implementations for storage, calculation and storing
    * calculation.
    */
-  function initialize_callbacks () {
-    $this->callbacks = array(
-      'storage' => $this->settings['callback storage'],
-      'calculation' => $this->settings['callback calculation'],
-      'storing calculation' => $this->settings['storing calculation'],
-    );
+  private function initialize_callbacks () {
+    $storage = $this->settings['callback storage'];
+    $calculation = $this->settings['callback calculation'];
+    $storing_calculation = $this->settings['storing calculation'];
+    // Set defaults
+    if (!$storage && !$calculation) {
+      // With specific storing calculation
+      if ($storing_calculation) {
+        $this->callbacks = array(
+          'storage' => 'stats_callback_default_storage',
+          'calculation' => 'stats_callback_default_calculation',
+          'storing calculation' => $storing_calculation,
+        );
+      }
+      else {
+        $this->callbacks = array(
+          'storage' => 'stats_callback_default_storage',
+          'calculation' => 'stats_callback_default_calculation',
+          //'storing calculation' => 'stats_callback_default_storing_calculation', - not yet implemented
+        );
+      }
+    }
+    // No storing calculation
+    elseif (!$storing_calculation) {
+      $this->callbacks = array(
+        'storage' => $storage,
+        'calculation' => $calculation,
+      );
+    }
+    else {
+      $this->callbacks = array(
+        'storage' => $storage,
+        'calculation' => $calculation,
+        'storing calculation' => $storing_calculation,
+      );
+    }
+  }
+
+  /**
+   * Load additional files needed for callbacks.
+   */
+  private function load_files() {
+    if (isset($this->settings['files']) && $this->settings['files']) {
+      if (!is_array($this->settings['files']) && is_file('./'. $this->settings['files'])) {
+        require_once './'. $this->settings['files'];
+      }
+      else {
+        foreach ($this->settings['files'] as $file) {
+          if (is_file('./'. $file)) {
+            require_once('./'. $file);
+          }
+        }
+      }
+    }
+    if (isset($this->settings['file']) && $this->settings['file']) {
+      if (is_file('./'. $this->settings['file'])) {
+        require_once './'. $this->settings['file'];
+      };
+    }
+    // Default file
+    module_load_include('inc', 'stats', 'stats.callbacks');
   }
 
   /**
@@ -228,7 +284,7 @@ class stats_default_worker {
 
     // If no storing calculation is available, serial processing is needed
     // first calculate then store
-    if (!$this->settings['callback storing calculation']) {
+    if (!$this->callbacks['storing calculation']) {
       $this->calculate();
       $this->write();
     }
@@ -268,7 +324,7 @@ class stats_default_worker {
       $this->current_values = array();
       // Transform return array to simple key => value
       foreach($current_values as $key => $item) {
-        if (is_array($item) && isset($item['subject'])) {
+        if (is_array($item) && isset($item['subject']) && isset($item['value'])) {
           $subj = $item['subject'];
           $val = $item['value'];
           $this->current_values[$subj] = $val;
@@ -296,7 +352,7 @@ class stats_default_worker {
     // Else recalculate defined subjects
     else {
       if (count($this->recalculate_subjects)) {
-        $return = call_user_func($callback, 'recalculate all', $this->settings, $this->subjects, $this->additions);
+        $return = call_user_func($callback, 'recalculate', $this->settings, $this->subjects, $this->additions);
       }
       // Process Additions for subjects that are not recalculated
       if (count($this->additions)) {
@@ -307,7 +363,7 @@ class stats_default_worker {
         // Addition needs current values
         $this->load();
 
-        $return_additions = call_user_func($callback, 'recalculate all', $this->settings, $subjects, $this->additions, $this->current_values);
+        $return_additions = call_user_func($callback, 'add', $this->settings, $subjects, $this->additions, $this->current_values);
         // Merge addition return with recalculate return
         $return = array_merge($return, $return_additions);
       }
@@ -327,7 +383,7 @@ class stats_default_worker {
   /**
    * Retrieves the status (new = 0, or updated = 1) for stats that shall be
    * written to database.
-   * This will use ->current_values and ->new_values to retrieve thhe status.
+   * This will use ->current_values and ->new_values to retrieve the status.
    */
   private function _updated_values() {
     $this->updated_values = array();
@@ -341,17 +397,17 @@ class stats_default_worker {
   public function write() {
     $callback = $this->settings['storage'];
     // Get updated values (set in ->calculate / ->updated_values)
-    $kupdated = array_flip($this->updated_values);
+    $keys_updated = array_flip($this->updated_values);
 
-    $updated = array_intersect_key($this->new_values,$kupdated);
-    $new = array_diff_key($this->new_values, $kupdated);
-    $s_updated = drupal_map_assoc(array_keys($updated));
-    $s_new = drupal_map_assoc(array_keys($new));
+    $updated = array_intersect_key($this->new_values, $keys_updated);
+    $new = array_diff_key($this->new_values, $keys_updated);
+    $subjects_updated = drupal_map_assoc(array_keys($updated));
+    $subjects_new = drupal_map_assoc(array_keys($new));
 
     // updated values
-    $ret1 = call_user_func($callback, 'update',  $this->settings, $s_updated, $updated);
+    $ret1 = call_user_func($callback, 'update',  $this->settings, $subjects_updated, $updated);
     // new values
-    $ret2 = call_user_func($callback, 'insert',  $this->settings, $s_new, $new);
+    $ret2 = call_user_func($callback, 'insert',  $this->settings, $subjects_new, $new);
 
     $diff_success = count($this->new_values) - $ret1 - $ret2;
 

@@ -8,7 +8,6 @@
  *  database table
  */
 
-require_once 'stats.callbacks.inc';
 
 /**
  * Updates or creates stats for the given stats type, eventually specified with
@@ -70,13 +69,10 @@ function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = 
  *   type of the stat
  * @param $subject
  *   id of the subject to return value(s) for
- * @param $only_value
- *   will return only the value of value column if set to TRUE
- *   else will return the whole stat array (subject, type, value, data, ...)
  * @return
  *  array of stats value arrays
  */
-function stats_load($type, $subjects = NULL, $only_value = TRUE) {
+function stats_load($type, $subjects = NULL) {
   $worker = stats_get_worker($type);
 
   // recalculate all for no given subject
@@ -249,32 +245,6 @@ function _stats_info_alter(&$stats_info) {
     // Set default handler and default callbacks
     if (empty($type['handler'])) {
       $type['handler'] = 'stats_default_worker';
-    }
-
-    if (empty($type['callbacks'])) {
-      $type['callbacks'] = array(
-        'storage' => 'stats_callback_default_storage',
-        'calcualtion' => 'stats_callback_default_calculation',
-        'storing calcualtion' => 'stats_callback_default_storing_calculation',
-      );
-    }
-    elseif (!is_array($type['callbacks'])) {
-      $callback = $type['callbacks'];
-      $type['callbacks'] = array(
-        'storage' => $callback,
-        'calculation' => $callback,
-        //'storing calculation' => $callback,
-      );
-    }
-
-    // Set default derivation callbacks
-    if (empty($type['derivation']['callback'])) {
-      $type['derivation']['callback'] = array(
-        'add' => 'stats_callback_derivation_add',
-        'rebuild single' => 'stats_callback_derivation_rebuild_single',
-        'rebuild all' => 'stats_callback_derivation_rebuild_all',
-        'skip load' => array('rebuild single', 'rebuild all'),
-      );
     }
 
     // Set views data, if no is set
