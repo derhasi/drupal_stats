@@ -7,87 +7,54 @@
  */
 
 /**
- * Structure of info array().
-  * type                  (string)
-  * name                  (string)
-  * description           (string)
-  * handler               (string) => class name
-
-
-  * callback storage
-    - load:
-      single: subject is no array or count 1
-      batch: subject is array with count > 1
-      all: no subject is given or array with count 0
-
-      => return ( subject, type, value)
-
-      callback storage load single  - (int|str) , (stats_type)
-      callback storage load batch   - (array)   , (stats_type)
-      callback storage load all     - NULL      , (stats_type)
-
-      callback storage load ($stats_type, $subjects)
-      OR callback storage (op=load , $stats_type, $subjects)
-
-    - write:
-      callback storage write
-      insert single new
-      update single existing
-      update batch existing
-      insert batch new
-      write batch new and updated
-      all
-
-
-    - delete
-      single
-      batch
-      all
-
-    CALLBACK -  $op, $stats_worker, $subjects, $values, $update
-    op: load, insert, update, delete
-
-  * callback calculation
-    variables per subject (old stats value, addition)
-    - all - no subject
-    - batch - 1 to n subjects
-    - single
-
-    CALLBACK -  $op, $stats_worker, $subjects, $new_values, $old_values
-    op: add, recalculate, recalculate all
-
-  * callback storing calculation
-
-      * calculate (add, rebuild single, rebuild all)
-      * storage (load, write)
-      * storing calculation (add, rebuild single, rebuild all)
-
-  * source table          (string)
-  * source subject field  (string)
-  * source value field    (string)
-  * source extra          (array) - not implemented yet!
-  * calculation mode      (string)
-  * storage table         (string)
-  * storage subject field (string)
-  * storage value field   (string)
-  * storage extra         (array) - not implemented yet!
-  for building automated views integration
-  * subject table         (string)
-  * subject field         (string)
-  * subject extra         (array)  - not implemented yet!
-  for custom views integration
-  * views data            (array)
-  * views data alter      (array)
-  *
-  *
-  *
-  *
-  *
-  * @TODO: FEATURES:
-  * - locked subjects
-  * -
-  */
+ * Default stats worker class for stats.module.
+ *
+ * It's the basic implementation for calculating and storing simple statistics.
+ *
+ * The stats worker itself can be controlled by the info array - defined in
+ * hook_stats_info().
+ *
+ * Structure of info array():
+ * General information
+ * - type (string) - stats type
+ * - name (string) - Human readable name of stats type
+ * - description (string) - description for Stats type
+ *
+ * Calculation
+ * - calculation mode (string) - the way stat is calculated (default: count),
+ *   stats core implementations are 'count', 'count_rows', 'min', 'max'
+ *
+ * Source information (where the data comes from)
+ * - source table (string)
+ * - source subject field (string)
+ * - source value field (string)
+ *
+ * Storage information (where stats are stored to)
+ * - storage table (string)
+ * - storage type field (optional string)
+ * - storage subject field (string)
+ * - storage value field (string)
+ *
+ * Callbacks
+ * - callback storage (string) - @see stats_callback_default_storage().
+ * - callback calculation (string) - @see stats_callback_default_calculation().
+ * - @TODO callback storing calculation (string) - @see stats_callback_default_storing_calculation().
+ *
+ * @TODO - Not implemented yet!
+ * - source and storage extra
+ * - views relevant data, like:
+ *   - subject table         (string)
+ *   - subject field         (string)
+ *   - subject extra         (array)  - not implemented yet!
+ *   - views data            (array)
+ *   - views data alter      (array)
+ *
+ * @TODO: FEATURES:
+ * - locked subjects
+ * - ...
+ */
 class stats_default_worker {
+
   /**
    * Basic variables for this class.
    */
@@ -98,11 +65,11 @@ class stats_default_worker {
 
   var $_reload = TRUE; // Indicator for if loading is necessary
 
-  var $callbacks = array(
-        'storage' => '',
-        'calculation' => '',
-        'storing calculation' => '',
-      );
+  var $callbacks = array(  // will get filled in ->initialize_callbacks
+    'storage' => '',
+    'calculation' => '',
+    'storing calculation' => '',
+  );
 
   /**
    * Subjects to be calculated.
@@ -232,7 +199,7 @@ class stats_default_worker {
       };
     }
     // Default file
-    module_load_include('inc', 'stats', 'stats.callbacks');
+    module_load_include('inc', 'stats', 'stats_default_worker.callbacks');
   }
 
   /**
@@ -267,7 +234,7 @@ class stats_default_worker {
   }
 
   /**
-   * Sets all subjects to get recalculated.
+   * Sets all subjects to get recalculated/loaded.
    */
   public function add_all() {
     $this->recalculate_all = TRUE;
