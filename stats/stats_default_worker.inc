@@ -45,7 +45,7 @@
  * - views relevant data, like:
  *   - subject table         (string)
  *   - subject field         (string)
- *   - subject extra         (array)  - not implemented yet!
+ *   - subject extra         (array)
  *   - views data            (array)
  *   - views data alter      (array)
  *
