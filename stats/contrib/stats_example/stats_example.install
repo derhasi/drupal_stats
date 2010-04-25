@@ -1,4 +1,5 @@
 <?php
+<?php
 
 /**
  * @file
@@ -8,23 +9,23 @@
 /**
  * Implementation of hook_install().
  */
-function stats_install(){
-  drupal_install_schema('stats');
+function stats_example_install(){
+  drupal_install_schema('stats_example');
 }
 
 /**
  * Implementation of hook_uninstall().
  */
-function annotation_api_uninstall(){
-  drupal_uninstall_schema('stats');
+function stats_example_uninstall(){
+  drupal_uninstall_schema('stats_example');
 }
 
 /**
  * Implementation of hook_schema().
  */
-function stats_schema() {
+function stats_example_schema() {
   return array(
-    'stats_int_int' => array(
+    'stats_example' => array(
       'fields' => array(
         'subject' => array(
           'description' => 'The subject id',

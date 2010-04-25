@@ -9,80 +9,41 @@
  * Return some stats info types
  */
 function stats_example_stats_info() {
-  $return = array(
-    'term_nodecount' => array(
-      'type' => 'term_nodecount',
-      'active' => TRUE,
-      'name' => t('Term - Node count'),
-      'description' => t('Counts the number of nodes assigned to term'),
-      'source' => array(
-        'table' => 'term_node',
-        'subject field' => 'tid',
-        'value field' => 'nid',
-        // 'extra' =>,
-      ),
-      'subject' => array(
-        'table' => 'term_data',
-        'field' => 'tid',
-        // 'extra' =>,
-      ),
-      'derivation' => array(
-        'mode' => 'count',
-      ),
-      'storage' => array(
-        'callback' => array(
-          'load' => 'stats_callback_storage_load',
-          'write' => 'stats_callback_storage_write',
-          'rebuild all' => 'stats_callback_derivation_rebuild_all',
-        ),
-        'table' => 'stats_int_int',
-        'subject field' => 'subject',
-        'value field' => 'value',
-        'type field' => 'type',
-        //'extra' => ,
-        'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
-        'views field declared' => FALSE, // FALSE default,
-      ),
-    ),
-    'user_nodecount' => array(
-      'type' => 'user_nodecount',
-      'active' => TRUE,
-      'name' => t('User - Node count'),
-      'description' => t('Counts the number of nodes created by a user'),
-      'source' => array(
-        'table' => 'node',
-        'subject field' => 'uid',
-        'value field' => 'nid',
-        // 'extra' =>,
-      ),
-      'subject' => array(
-        'table' => 'users',
-        'field' => 'uid',
-        // 'extra' =>,
-      ),
-      'derivation' => array(
-        'mode' => 'count',
-      ),
-      'storage' => array(
-        'callback' => array(
-          'load' => 'stats_callback_storage_load',
-          'write' => 'stats_callback_storage_write',
-          'rebuild all' => 'stats_callback_derivation_rebuild_all',
-        ),
-        'table' => 'stats_int_int',
-        'subject field' => 'subject',
-        'value field' => 'value',
-        'type field' => 'type',
-        //'extra' => ,
-        'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
-        'views field declared' => FALSE, // FALSE default,
-      ),
-      'derivation & storage' => array(
-        'callback' => array(
-          'rebuild all' => 'stats_callback_derivation_rebuild_all',
-        ),
-      ),
-    ),
+  $return = array();
+
+  $return['user_nodecount'] = array(
+    'handler' => 'stats_default_worker', // Default
+    'callback storage' => 'stats_callback_default_storage', // Default for handler
+    'callback calculation' => 'stats_callback_default_calculation', // Default for handler
+    //'callback stroing calcualtion' => --- @TODO!
+    'calculation mode' => 'COUNT', // Default for handler
+    /// General
+    'type' => 'user_nodecount',
+    'active' => TRUE,
+    'name' => t('User - Node count'),
+    'description' => t('Counts the number of nodes created by a user'),
+    // Source
+    'source table' => 'node',
+    'source subject field' => 'uid',
+    'source value field' => 'nid',
+    // Subject - needed for views
+    'subject table' => 'users',
+    'subject field' => 'uid',
+    // Storage
+    'storage table' => 'stats_example',
+    'storage subject field' => 'subject',
+    'storage value field' => 'value',
+    'storage type field' => 'type',
+
+    //'extra' => ,
+    'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
+    'views field declared' => FALSE, // FALSE default,
+
   );
   return $return;
 }
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function stats_example_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
