@@ -46,4 +46,14 @@ function stats_example_stats_info() {
 /**
  * Implementation of hook_nodeapi().
  */
-function stats_example_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
+function stats_example_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      // Update stats for the author
+      stats_run('user_nodecount', $node->uid, $node->nid);
+      break;
+  }
+
+}

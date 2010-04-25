@@ -364,8 +364,8 @@ class stats_default_worker {
         $this->load();
 
         $return_additions = call_user_func($callback, 'add', $this->settings, $subjects, $this->additions, $this->current_values);
-        // Merge addition return with recalculate return
-        $return = array_merge($return, $return_additions);
+        // Merge addition return with recalculate return - no array_merge(), because it renumbers keys
+        $return = $return + $return_additions;
       }
     }
     // Set new_values
@@ -395,7 +395,7 @@ class stats_default_worker {
    * Store actual calculation.
    */
   public function write() {
-    $callback = $this->settings['storage'];
+    $callback = $this->callbacks['storage'];
     // Get updated values (set in ->calculate / ->updated_values)
     $keys_updated = array_flip($this->updated_values);
 
@@ -409,13 +409,13 @@ class stats_default_worker {
     // new values
     $ret2 = call_user_func($callback, 'insert',  $this->settings, $subjects_new, $new);
 
-    $diff_success = count($this->new_values) - $ret1 - $ret2;
+    $success = $ret1 && $ret2;
 
     // Set new_values to empty, after write
     $this->new_values = array();
 
     // return TRUE if all values have been saved.
-    return !$diff_success;
+    return $success;
   }
 
 }

@@ -43,15 +43,16 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
   $table = $settings['storage table'];
   $subject_field = $settings['storage subject field'];
   $type_field = $settings['storage type field'];
-  $value_field = $type['storage value field'];
-  $extra =  $type['storage extra'];
+  $value_field = $settings['storage value field'];
+  $extra = $settings['storage extra'];
+  // Ensure subjects to be in array
   if (isset($subjects) && !is_array($subjects)) {
     $subjects = array($subjects);
   }
 
   switch ($op) {
     case 'load':
-      $query = "SELECT * FROM {$table}";
+      $query = 'SELECT * FROM {'. $table .'}';
       $args = array();
 
       // Restrict load on specified subjects
@@ -59,7 +60,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
         $cast_subject = _stats_column_type_conversion_helper($table, $subject_field);
         $where = implode(' OR ', array_fill(0, count($subjects), "$subject_field = $cast_subject"));
         $where = "($where)";
-        $args = $subjects;
+        $args = array_merge($args, $subjects);
       }
 
       // Add type column to check in query
@@ -67,7 +68,7 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
         if ($where) {
           $where .= ' AND ';
         }
-        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);// @TODO: retrieve type conversion from schema
+        $where .= "$type_field = ". _stats_column_type_conversion_helper($table, $type_field);
         $args[] = $settings['type'];
       }
 
@@ -100,7 +101,13 @@ function stats_callback_default_storage($op, $settings, $subjects = NULL, $new_v
             $value_field => $new_values[$subject],
           );
         }
-        $return += drupal_write_record($table,$obj) / SAVED_NEW;
+        else {
+          $obj = (object) array(
+            $subject_field => $subject,
+            $value_field => $new_values[$subject],
+          );
+        }
+        $return += drupal_write_record($table, $obj) / SAVED_NEW;
       }
       return (count($subjects) == $return);
     case 'update':
@@ -195,7 +202,14 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   switch ($op) {
     case 'add':
       foreach ($subjects as $subject) {
-        $return[$subject] = call_user_func($addfunc, $current_values[$subject], $additions[$subject]);
+        if (isset($additions[$subject])) {
+          if (isset($current_values[$subject])) {
+            $return[$subject] = call_user_func($addfunc, $additions[$subject], $current_values[$subject]);
+          }
+          else {
+            $return[$subject] = call_user_func($addfunc, $additions[$subject]);
+          }
+        }
       }
       return $return;
     case 'recalculate':
@@ -268,18 +282,24 @@ function _stats_calc_recalculate_count_rows($vars) {
 /**
  * Add calc functions
  */
-function _stats_calc_add_count($old_value, $additions) {
+function _stats_calc_add_count($additions, $old_value = 0) {
   return $old_value + count($additions);
 }
-function _stats_calc_add_count_rows($old_value, $additions) {
+function _stats_calc_add_count_rows($additions, $old_value = 0) {
   return $old_value + count($additions);
 }
-function _stats_calc_add_sum($old_value, $additions) {
+function _stats_calc_add_sum($additions, $old_value = 0) {
   return $old_value + sum($additions);
 }
-function _stats_calc_add_min($old_value, $additions) {
+function _stats_calc_add_min($additions, $old_value = NULL) {
+  if (!isset($old_value)) {
+    return min($additions);
+  }
   return min($old_value, min($additions));
 }
-function _stats_calc_add_max($old_value, $additions) {
+function _stats_calc_add_max($additions, $old_value = NULL) {
+  if (!isset($old_value)) {
+    return max($additions);
+  }
   return max($old_value, max($additions));
 }

@@ -37,7 +37,7 @@ function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = 
   else {
     // Single subject
     if (!is_array($subjects)) {
-      $worker->add_subject($subject, $addition);
+      $worker->add_subject($subjects, $additions);
     }
     else {
       // Prepare both for foreach
@@ -163,7 +163,7 @@ function _stats_worker_prepare($handler) {
     // Load file
     if (isset($worker_info[$handler]['file'])) {
       if (is_file('./'. $worker_info[$handler]['file'])) {
-        require_once './'. $type['file'];
+        require_once './'. $worker_info[$handler]['file'];
       }
       else {
         watchdog('stats', '%file could not be loaded for stats_worker %handler.', array('%handler' => $handler, '%file' => $worker_info[$handler]['file']));
@@ -319,7 +319,7 @@ function _stats_info_alter(&$stats_info) {
 function stats_stats_worker_info() {
   return array(
     'stats_default_worker' => array(
-      'file' => drupal_get_path('moduel', 'stats') .'/stats_default_worker.inc',
+      'file' => drupal_get_path('module', 'stats') .'/stats_default_worker.inc',
     ),
   );
 }
@@ -341,7 +341,7 @@ function _stats_column_type_conversion_helper($table, $field) {
   static $conv;
   if (!isset($conv[$table][$field])) {
     $schema = drupal_get_schema($table);
-    $conv[$table] = db_type_placeholder($schema['fields'][$field]['type']);
+    $conv[$table][$field] = db_type_placeholder($schema['fields'][$field]['type']);
   }
   return $conv[$table][$field];
 }
