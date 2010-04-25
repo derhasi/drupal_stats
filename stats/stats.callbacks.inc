@@ -191,7 +191,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
   }
 
   $args = array();
-  // @TODO
+
   switch ($op) {
     case 'add':
       foreach ($subjects as $subject) {
@@ -227,17 +227,18 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
           'query_args' => $args,
         );
         $res = call_user_func($recalcfunc, $vars);
-        // Func could return the concrete
+        // Func could return the concrete return array
         if (is_array($res)) {
           return $res;
         }
       }
+      // Execute default query
       else {
         $query = "SELECT $subject_field AS subject, $calc_mode($value_field) AS result FROM {$table} $where GROUP BY $subject_field";
         $res = db_query($query, $args);
       }
 
-      $res = db_query($query, $args);
+      // Evaluate result resource (either from default query or custom recalcfunc)
       while ($item = db_fetch_object($res)) {
         $return[$item->subject] = $item->result;
       }
