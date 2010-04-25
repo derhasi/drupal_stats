@@ -10,16 +10,36 @@
  *
  * Functionality is driven by drupal_queue.module.
  * @param $type
- * @param $subject
- * @param $addition
+ * @param $subjects
+ *  - array of subjects or single non-array subject
+ * @param $additions
+ *  - array of additions arrays or single non-array addition
+ *    or additions array if subject is single non-array addition
  * @return
  */
 function stats_queue($type, $subjects = NULL, $additions = NULL) {
 
   // Write data to {stats_queue}
+  if (is_array($subjects) && !is_array($additions)) {
+    $add = $subjects;
+    $additions = array_fill(0, count($subjects), $additions);
+    $recalculate = array();
+  }
+  elseif (!is_array($subjects)) {
+    $subjects = array($subjects);
+    if (!isset($additions)) {
+      // Nothing
+    }
+    elseif (!is_array($additions)) {
+      $additions = array($additions);
+    }
+    else {
+      $additions = array($additions);
+    }
+  }
 
   $subjects = array_values($subjects);
-  $additions = array_values($additions);
+  if (isset($addions)) $additions = array_values($additions);
 
   // recalculate all
   if (!isset($subjects)) {
@@ -39,11 +59,6 @@ function stats_queue($type, $subjects = NULL, $additions = NULL) {
     if (!isset($additions)) {
       $recalculate = $subjects;
       $add = array();
-    }
-    elseif (!is_array($additions)) {
-      $add = $subjects;
-      $additions = array_fill(0, count($subjects), $additions);
-      $recalculate = array();
     }
     else {
       $ca = count($additions);
