@@ -52,7 +52,7 @@ function stats_example_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'insert':
     case 'update':
       // Update stats for the author
-      stats_run('user_nodecount', $node->uid, $node->nid);
+      stats_run('user_nodecount', $node->uid);
       break;
   }
 

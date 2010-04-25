@@ -16,11 +16,10 @@
  *
  * @param $type
  *  stats type - defined by module or stored in database
- * @param $subject
- *  (optional) specific subject to rebuild the value for a specific subject
- * @param $addition
- *  (optional) value that was instantly added, needed to create data updates,
- *  without doing a rebuild
+ * @param $subjects
+ *  (optional) specific subjects to add or recalculate stats for.
+ * @param $additions
+ *  (optional) addition values for subjects in given order
  * @param $return_values
  *  (optional) default: FALSE, on TRUE this will return the derived values
  *  an array instead of storing.
@@ -37,7 +36,12 @@ function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = 
   else {
     // Single subject
     if (!is_array($subjects)) {
-      $worker->add_subject($subjects, $additions);
+      if (isset($additions)) {
+        $worker->add_subject($subjects, $additions);
+      }
+      else {
+        $worker->add_subject($subjects);
+      }
     }
     // Array of subjects
     else {
@@ -49,8 +53,12 @@ function stats_run($type, $subjects = NULL, $additions = NULL, $return_values = 
       $subjects = array_values($subjects);
       $additions = array_values($additions);
       foreach($subjects as $i => $subject) {
-        $addition = $additions[$i];
-        $worker->add_subject($subject, $addition);
+        if (!isset($additions[$i])) {
+          $worker->add_subject($subject, $additions[$i]);
+        }
+        else {
+          $worker->add_subject($subject);
+        }
       }
     }
   }

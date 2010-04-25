@@ -213,7 +213,7 @@ function stats_callback_default_calculation($op, $settings, $subjects = NULL, $a
       }
       return $return;
     case 'recalculate':
-      // no Subjects no calculation, return uncalulated current values
+      // no Subjects no calculation, return uncalculated current values
       if (!count($subjects)) {
         return $return;
       }

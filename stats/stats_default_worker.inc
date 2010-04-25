@@ -382,6 +382,7 @@ class stats_default_worker {
    * This will use ->current_values and ->new_values to retrieve the status.
    */
   private function _updated_values() {
+    $this->load(); // Ensure current values to be loaded.
     $this->updated_values = array();
     $existing = array_intersect_key($this->new_values, $this->current_values);
     $this->updated_values = $existing;
@@ -400,12 +401,16 @@ class stats_default_worker {
     $subjects_updated = drupal_map_assoc(array_keys($updated));
     $subjects_new = drupal_map_assoc(array_keys($new));
 
+    $success = TRUE;
     // updated values
-    $ret1 = call_user_func($callback, 'update',  $this->settings, $subjects_updated, $updated);
+    if (count($subjects_updated)) {
+      $success = call_user_func($callback, 'update',  $this->settings, $subjects_updated, $updated);
+    }
     // new values
-    $ret2 = call_user_func($callback, 'insert',  $this->settings, $subjects_new, $new);
-
-    $success = $ret1 && $ret2;
+    if (count($subjects_new)) {
+      $ret2 = call_user_func($callback, 'insert',  $this->settings, $subjects_new, $new);
+      $success = ($success) ? $ret2 : FALSE;
+    }
 
     // Set new_values to empty, after write
     $this->new_values = array();
