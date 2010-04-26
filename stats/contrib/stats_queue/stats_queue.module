@@ -119,7 +119,7 @@ function stats_queue_cron_queue_info() {
 }
 
 /**
- * Runs the item via stats_run.
+ * Runs all items of a specifix stats type.
  */
 function stats_queue_worker_callback($type) {
 
@@ -144,6 +144,7 @@ function stats_queue_worker_callback($type) {
       $adds[] = (object) array('subject' => $subject, 'addition' => $addition);
     }
   }
+
   // DELETE all of type
   db_query("DELETE FROM {stats_queue} WHERE type ='%s'", $type);
 
