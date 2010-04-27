@@ -11,7 +11,7 @@
 function stats_example_stats_info() {
   $return = array();
 
-  $return['user_nodecount'] = array(
+  $return['example_user_nodecount'] = array(
     'handler' => 'stats_default_worker', // Default
     'callback storage' => 'stats_callback_default_storage', // Default for handler
     'callback calculation' => 'stats_callback_default_calculation', // Default for handler
@@ -52,7 +52,7 @@ function stats_example_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'insert':
     case 'update':
       // Update stats for the author
-      stats_run('user_nodecount', $node->uid);
+      stats_run('example_user_nodecount', $node->uid);
       break;
   }
 
