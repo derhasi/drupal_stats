@@ -17,34 +17,15 @@
  *    or additions array if subject is single non-array addition
  * @return
  */
-function stats_queue($type, $subjects = NULL, $additions = NULL) {
+function stats_queue($type, $subjects = NULL, $additions = NULL, $delete_unnecessary = TRUE) {
 
-  // Write data to {stats_queue}
-  if (is_array($subjects) && !is_array($additions)) {
-    $add = $subjects;
-    $additions = array_fill(0, count($subjects), $additions);
-    $recalculate = array();
-  }
-  elseif (!is_array($subjects)) {
-    $subjects = array($subjects);
-    if (!isset($additions)) {
-      // Nothing
-    }
-    elseif (!is_array($additions)) {
-      $additions = array($additions);
-    }
-    else {
-      $additions = array($additions);
-    }
-  }
-
-  $subjects = array_values($subjects);
-  if (isset($addions)) $additions = array_values($additions);
-
-  // recalculate all
+  // Queue to recalculate all
   if (!isset($subjects)) {
-    $query = "DELETE FROM {stats_queue} WHERE type = '%s'";
-    db_query($query, $type);
+    // delete all subject recalcualtion
+    if ($delete_unnecessary) {
+      $query = "DELETE FROM {stats_queue} WHERE type = '%s'";
+      db_query($query, $type);
+    }
     $write = (object) array(
       'type' => $type,
       'subject' => NULL,
@@ -52,8 +33,21 @@ function stats_queue($type, $subjects = NULL, $additions = NULL) {
     );
     drupal_write_record('stats_queue', $write);
   }
-  // Calculate specific subjects
+  // Queue to calculate specific subjects
   else {
+
+    // Transform subject to array
+    if (!is_array($subjects)) {
+      $subjects = array($subjects);
+    }
+    $subjects = array_values($subjects);
+
+    // Single addition will be applied to each subject
+    // transform to array(array())
+    if (isset($additions) && !is_array($additions)) {
+      $additions = array_fill(0, count($subjects), array($additions));
+    }
+
     $recalculate = array();
     $add = array();
     if (!isset($additions)) {
@@ -70,6 +64,8 @@ function stats_queue($type, $subjects = NULL, $additions = NULL) {
     if (count($add)) {
       foreach ($add as $i => $a) {
         $addition = $additions[$i];
+        // Addition has to be an array
+        if (!is_array($addition)) $addition = array($addition);
         $write = (object) array(
           'type' => $type,
           'subject' => $a,
@@ -94,8 +90,11 @@ function stats_queue($type, $subjects = NULL, $additions = NULL) {
           'addition' => NULL,
         );
       }
-      $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND subject IN (". implode(',', $casts) .")";
-      db_query($query, $args);
+      // delete all subject addition recalculation
+      if ($delete_unnecessary) {
+        $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND subject IN (". implode(',', $casts) .")";
+        db_query($query, $args);
+      }
       foreach ($writes as $write) {
         drupal_write_record('stats_queue', $write);
       }
@@ -131,8 +130,8 @@ function stats_queue_worker_callback($type) {
   $recalc = array();
   $adds = array();
   while ($obj = db_fetch_object($res)){
-    $subject = unserialize($obj->subject);
-    $addition = unserialize($obj->addition);
+    $subject = (isset($obj->subject)) ? unserialize($obj->subject) : NULL;
+    $addition = (isset($obj->addition)) ? unserialize($obj->addition) : NULL;
     if (!isset($subject)) {
       $recalculate_all = TRUE;
       break;
