@@ -27,6 +27,12 @@ function stats_queue_schema() {
   return array(
     'stats_queue' => array(
       'fields' => array(
+        'id' => array(
+          'description' => 'Id of the queue entry, to ensure correct order.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ),
         'type' => array(
           'type' => 'varchar',
           'length' => 60,
@@ -48,11 +54,19 @@ function stats_queue_schema() {
           'not null' => FALSE,
           'serialize' => TRUE,
         ),
+        'timestamp' => array(
+          'description' => 'The Unix timestamp when the entry should be executed',
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
       ),
       'indexes' => array(
         'type' => array('type'),
         'subject' => array('subject(30)'),
+        'timestamp' => array('timestamp'),
       ),
+      'primary key' => array('id'),
     ),
   );
 }
