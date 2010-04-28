@@ -335,16 +335,6 @@ function stats_stats_worker_info() {
 }
 
 /**
- * Implementation of hook_views_api().
- */
-function stats_views_api() {
-  return array(
-    'api' => 2,
-    'path' => drupal_get_path('module', 'stats'),
-  );
-}
-
-/**
  * Helper function for getting the schema specific place hold for the column.
  */
 function _stats_column_type_conversion_helper($table, $field) {
