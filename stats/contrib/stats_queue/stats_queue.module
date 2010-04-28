@@ -12,24 +12,36 @@
  * @param $type
  * @param $subjects
  *  - array of subjects or single non-array subject
+ *  - if no value is given the complete stat type values will be recalculated
+ *    for each subject
  * @param $additions
  *  - array of additions arrays or single non-array addition
- *    or additions array if subject is single non-array addition
+ *    if no addition is given, a recalcualtion of all given subjects will be
+ *    indicated
+ * @param $timestamp
+ *  - unix timestamp of the earliest time this stat creation should be processed
+ *    or a time expression supported by strotime().
+ * @param $delete_unnecessary
+ *  - by default (TRUE) it deletes all queued entries that might be unnecessary
+ *    because of a current recalculation.
  * @return
  */
-function stats_queue($type, $subjects = NULL, $additions = NULL, $delete_unnecessary = TRUE) {
+function stats_queue($type, $subjects = NULL, $additions = NULL, $timestamp = 0, $delete_unnecessary = TRUE) {
+
+  $timestamp = _stats_queue_prepare_timestamp($timestamp);
 
   // Queue to recalculate all
   if (!isset($subjects)) {
     // delete all subject recalcualtion
     if ($delete_unnecessary) {
-      $query = "DELETE FROM {stats_queue} WHERE type = '%s'";
-      db_query($query, $type);
+      $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND timestamp <= %d";
+      db_query($query, $type, $timestamp);
     }
     $write = (object) array(
       'type' => $type,
       'subject' => NULL,
       'addition' => NULL,
+      'timestamp' => $timestamp,
     );
     drupal_write_record('stats_queue', $write);
   }
@@ -70,6 +82,7 @@ function stats_queue($type, $subjects = NULL, $additions = NULL, $delete_unneces
           'type' => $type,
           'subject' => $a,
           'addition' => $addition,
+          'timestamp' => $timestamp,
         );
         drupal_write_record('stats_queue', $write);
       }
@@ -78,7 +91,7 @@ function stats_queue($type, $subjects = NULL, $additions = NULL, $delete_unneces
     // Add subjects for recalcualtion
     if (count($recalculate)) {
       // Delete existing
-      $args = array($type);
+      $args = array($type, $timestamp);
       $casts = array();
       $writes = array();
       foreach ($recalculate as $rec) {
@@ -92,7 +105,7 @@ function stats_queue($type, $subjects = NULL, $additions = NULL, $delete_unneces
       }
       // delete all subject addition recalculation
       if ($delete_unnecessary) {
-        $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND subject IN (". implode(',', $casts) .")";
+        $query = "DELETE FROM {stats_queue} WHERE type = '%s' AND timestamp <= %d AND subject IN (". implode(',', $casts) .")";
         db_query($query, $args);
       }
       foreach ($writes as $write) {
@@ -122,14 +135,28 @@ function stats_queue_cron_queue_info() {
  */
 function stats_queue_worker_callback($type) {
 
+  $timestamp = time();
+
+  $process_count = variable_get('stats_queue_max_process_per_type', 50);
+
   // Load all data to process from stats_queue, then delete it
-  $query = "SELECT * FROM {stats_queue} WHERE type = '%s'";
-  $res = db_query($query, $type);
+  $query = "SELECT * FROM {stats_queue} WHERE type = '%s' AND timestamp <= %d ORDER BY id ASC";
+  $res = db_query_range($query, $type, $timestamp, $process_count + 1);
   $items = array();
   $recalculate_all = FALSE;
   $recalc = array();
   $adds = array();
-  while ($obj = db_fetch_object($res)){
+  $count = 0;
+  $last_id = 0;
+  $next_id = FALSE;
+  while ($obj = db_fetch_object($res)) {
+    $count++;
+    // One element more exists, so break
+    if ($count > $process_count) {
+      $next_id = $obj->id;
+      break;
+    }
+    // Prepare object
     $subject = (isset($obj->subject)) ? unserialize($obj->subject) : NULL;
     $addition = (isset($obj->addition)) ? unserialize($obj->addition) : NULL;
     if (!isset($subject)) {
@@ -142,13 +169,13 @@ function stats_queue_worker_callback($type) {
     else {
       $adds[] = (object) array('subject' => $subject, 'addition' => $addition);
     }
+    $last_id = $obj->id;
   }
 
-  // DELETE all of type
-  db_query("DELETE FROM {stats_queue} WHERE type ='%s'", $type);
+  // DELETE all of type (and before time and last id)
+  db_query("DELETE FROM {stats_queue} WHERE type ='%s' AND timestamp <= %d AND id <= %d", $type, $timestamp, $last_id);
 
   $worker = stats_get_worker($type);
-
   if ($recalculate_all) {
     $worker->add_all();
   }
@@ -161,5 +188,32 @@ function stats_queue_worker_callback($type) {
     }
   }
 
-  return $worker->execute();
+  $return = $worker->execute();
+
+  // If next id exists, set the next round in queue
+  // After worker has done his job, to avoid multi instances
+  if ($next_id) {
+    $queue = drupal_queue_get('stats');
+    $queue->createItem($type);
+  }
+
+  return $return;
+}
+
+
+/**
+ * Helper function to convert alternate time/date values.
+ */
+function _stats_queue_prepare_timestamp($timestamp) {
+
+  // 0 indicates, immediatly and so set to current time
+  if ($timestamp == 0) {
+    return time();
+  }
+  elseif (is_numeric($timestamp)) {
+    return $timestamp;
+  }
+  else {
+    return strtotime($timestamp);
+  }
 }
