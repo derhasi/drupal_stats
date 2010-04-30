@@ -1,0 +1,7 @@
+; $Id$
+name = Stats Nodecount
+description = Implements count statistics for nodes (per user, per term).
+core = 6.x
+version = dev
+dependencies[] = stats
+package = "Stats"

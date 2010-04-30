@@ -1,0 +1,29 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   information for install, update and enable stats
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function stats_nodecount_install(){
+  drupal_install_schema('stats_nodecount');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function stats_nodecount_uninstall(){
+  drupal_uninstall_schema('stats_nodecount');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function stats_nodecount_schema() {
+  return array(
+  );
+}
