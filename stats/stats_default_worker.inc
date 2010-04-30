@@ -143,6 +143,8 @@ class stats_default_worker {
     $storage = $this->settings['callback storage'];
     $calculation = $this->settings['callback calculation'];
     $storing_calculation = $this->settings['storing calculation'];
+    $views_data = $this->settings['callback views data'];
+    $views_data_alter = $this->settings['callback views data alter'];
     // Set defaults
     if (!$storage && !$calculation) {
       // With specific storing calculation
@@ -160,6 +162,7 @@ class stats_default_worker {
           //'storing calculation' => 'stats_callback_default_storing_calculation', - not yet implemented
         );
       }
+
     }
     // No storing calculation
     elseif (!$storing_calculation) {
@@ -174,6 +177,18 @@ class stats_default_worker {
         'calculation' => $calculation,
         'storing calculation' => $storing_calculation,
       );
+    }
+
+    // Default views implementation for default storage function.
+    if ($this->callbacks['storage'] == 'stats_callback_default_storage' && !$views_data && !$views_data_alter) {
+      $this->callbacks['views data'] = 'stats_callback_default_views_data_implementation';
+      $this->callbacks['views data alter'] = 'stats_callback_default_views_data_alter_implementation';
+    }
+    if ($views_data) {
+      $this->callbacks['views data'] = $views_data;
+    }
+    if ($views_data_alter) {
+      $this->callbacks['views data alter'] = $views_data_alter;
     }
   }
 
@@ -384,6 +399,29 @@ class stats_default_worker {
 
     // return TRUE if all values have been saved.
     return $success;
+  }
+
+  /**
+   * Implement views for stats.
+   */
+  public function views_data() {
+    if (isset($this->callbacks['views data']) && $this->callbacks['views data']) {
+      $func = $this->callbacks['views data'];
+      return $func($this->settings);
+    }
+    else {
+      return array();
+    }
+  }
+
+  /**
+   * Implement views data alter for stats.
+   */
+  public function views_data_alter(&$data) {
+    if (isset($this->callbacks['views data alter']) && $this->callbacks['views data alter']) {
+      $func = $this->callbacks['views data alter'];
+      $func(&$data, $this->settings);
+    }
   }
 
 }

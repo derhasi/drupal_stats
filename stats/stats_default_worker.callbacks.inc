@@ -303,3 +303,180 @@ function _stats_calc_add_max($additions, $old_value = NULL) {
   }
   return max($old_value, max($additions));
 }
+
+/**
+ * Stats default worker views implementation.
+ */
+function stats_callback_default_views_data_implementation($settings) {
+
+  $type = $settings['type'];
+
+  $storage_table = $settings['storage table'];
+  $storage_subject_field = $settings['storage subject field'];
+  $storage_type_field = $settings['storage type field'];
+  $storage_value_field = $settings['storage value field'];
+
+  //PREPARE settings
+  $prep = _stats_callback_default_prepaore_for_views_data($settings);
+  $storage_views_relations = (array) $prep['relations'];
+  $storage_views_fields = (array) $prep['fields'];
+
+  //Set data array
+  $data['stats_'. $type .'_'. $storage_table]['table']['group'] = t('Stats');
+  $data['stats_'. $type .'_'. $storage_table]['table']['title'] = "field: $type - $storage_table";
+  $data['stats_'. $type .'_'. $storage_table]['table']['help'] = "help: $type - $storage_table";
+
+  foreach ($storage_views_fields as $field => $field_type) {
+    $data['stats_'. $type .'_'. $storage_table][$field] = array(
+      'title' => t('@type - @field', array('@type' => $type, '@field' =>$field)),
+      'help' => "help: $type - $field",
+      'field' => array(
+        'handler' => 'views_handler_field_'. $field_type,
+        'click sortable' => TRUE,
+      ),
+      'argument' => array(
+        'handler' => 'views_handler_argument_'. $field_type,
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_'. $field_type,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+    );
+  }
+
+  // Add joins and relations.
+  foreach ($storage_views_relations as $field => $rel) {
+    // Only add if there are relation tables and field.
+    if ($rel['table'] && $rel['field']) {
+      // Add join
+      $data['stats_'. $type .'_'. $storage_table]['table']['join'][$rel['table']] = array(
+        'table' => $storage_table,
+        'field' => $field,
+        'left_field' => $rel['field'],
+      );
+      if ($rel['extra']) {
+        $data['stats_'. $type .'_'. $storage_table]['table']['join'][$rel['table']]['extra'] = $rel['extra'];
+      }
+
+      // Add relations only if there are more than 1, because back relation for only one relation is useless.
+      if (count($storage_views_relations) > 1) {
+        if (!isset($data['stats_'. $type .'_'. $storage_table][$field])) {
+          $data['stats_'. $type .'_'. $storage_table][$field] = array(
+            'title' => t('Stats: @type - @field', array('@type' => $type, '@field' =>$field)),
+            'help' => "help: $type - $field",
+          );
+        }
+        $data['stats_'. $type .'_'. $storage_table][$field]['relationship'] = array(
+          'base' => $rel['table'],
+          'field' => $rel['field'],
+          'left field' => $field,
+          'handler' => 'views_handler_relationship',
+          'label' => t('@type:@field:@table', array('@type' => $type, '@field' => $field, '@table' => $rel['table'])),
+        );
+        if ($rel['extra']) {
+          $data['stats_'. $type .'_'. $storage_table][$field]['relationship']['extra'] = $rel['extra'];
+        }
+      }
+    }
+  }
+  return $data;
+}
+
+/**
+ * Stats default worker views data alter implementation.
+ *
+ * - does nothing, only for callback presentation
+ */
+function stats_callback_default_views_data_alter_implementation(&$data, $settings) {
+  // nothing because most storage tables are non-base-tables.
+}
+
+/**
+ * Helper functions to prepare settings for views data (alter) implementation.
+ */
+function _stats_callback_default_prepaore_for_views_data($settings) {
+
+  $type = $settings['type'];
+
+  $storage_table = $settings['storage table'];
+  $storage_subject_field = $settings['storage subject field'];
+  $storage_type_field = $settings['storage type field'];
+  $storage_value_field = $settings['storage value field'];
+
+  $storage_views_relations = (array) $settings['storage views relations'];
+  $storage_views_fields = (array) $settings['storage views relations'];
+
+  // Set default field definition for value field.
+  if (!isset($storage_views_fields) || !isset($storage_views_fields[$storage_value_field])) {
+    $cast = _stats_column_type_conversion_helper($storage_table, $storage_value_field);
+    $storage_views_fields[$storage_value_field] = ($cast == "%d") ? 'numeric' : 'string';
+  }
+
+  // Set default relations for
+  if (!isset($storage_views_relations) || !isset($storage_views_relations[$storage_subject_field])) {
+    // Extract information from subject table setting
+    if (isset($settings['subject table'])) {
+      $subject_table = $settings['subject table'];
+      if (isset($settings['subject field'])) {
+        $subject_field = $settings['subject field'];
+      }
+      // Get primary key or serial field
+      else {
+        $schema = drupal_get_schema($subject_table);
+        $subject_field = _stats_get_idfield($subject_table);
+      }
+      if ($subject_table && $subject_field) {
+        $storage_views_relations[$storage_subject_field] = array(
+          'table' => $subject_table,
+          'field' => $subject_field,
+        );
+      }
+    }
+  }
+
+  // Convert to consistent format
+  foreach ($storage_views_relations as $field => $spec) {
+    if (!is_array($spec) && $spec == $storage_table) {
+      unset($storage_views_relations[$field]);
+    }
+    elseif (!is_array($spec)) {
+      $storage_views_relations[$field] = array(
+        'table' => $spec,
+        'field' => _stats_get_idfield($spec),
+      );
+    }
+    // no or invalid table => remove relation entry
+    elseif (!isset($spec['table']) || $spec['table'] == $storage_table) {
+      unset($storage_views_relations[$field]);
+    }
+    elseif (!isset($spec['field'])) {
+      $storage_views_relations[$field] = array(
+        'table' => $spec['table'],
+        'field' => _stats_get_idfield($rel_field),
+        'extra' => $spec['extra'],
+      );
+    }
+  }
+
+  return array('fields' => $storage_views_fields, 'relations' => $storage_views_relations);
+}
+
+/**
+ * Helper function to get ID field from table definition.
+ */
+function _stats_get_idfield($table) {
+  $schema = drupal_get_schema($table);
+  if (count($schema['primary key']) == 1) {
+    return current($schema['primary key']);
+  }
+  else {
+    foreach ($schema['fields'] as $fieldname => $field) {
+      if ($field['type'] == 'serial') {
+        return $fieldname;
+      }
+    }
+  }
+  return FALSE;
+}

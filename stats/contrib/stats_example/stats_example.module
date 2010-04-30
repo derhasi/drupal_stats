@@ -16,6 +16,8 @@ function stats_example_stats_info() {
     'callback storage' => 'stats_callback_default_storage', // Default for handler
     'callback calculation' => 'stats_callback_default_calculation', // Default for handler
     //'callback stroing calcualtion' => --- @TODO!
+    'callback views data' => 'stats_callback_default_views_data_implementation', // Default for handler
+    'callback views data alter' => 'stats_callback_default_views_data_alter_implementation', // Default for handler
     'calculation mode' => 'COUNT', // Default for handler
     /// General
     'type' => 'user_nodecount',
@@ -36,8 +38,16 @@ function stats_example_stats_info() {
     'storage type field' => 'type',
 
     // @TODO: Views implementation
-    'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
-    'views field declared' => FALSE, // FALSE default,
+    //'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
+    //'views field declared' => FALSE, // FALSE default,
+    'storage views fields' => array(
+      'value' => 'numeric',
+      'type' => 'string',
+    ),
+    'storage views relations' => array(
+      //'subject' => 'users',
+      'subject' => array('table' => 'users', 'field' => 'uid'),
+    ),
 
   );
   return $return;

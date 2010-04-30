@@ -257,69 +257,7 @@ function _stats_info_alter(&$stats_info) {
       $type['handler'] = 'stats_default_worker';
     }
 
-    // Set views data, if no is set
-    if (!isset($type['views data'])) {
-      $table = $type['storage']['table'];
-      $col_subject = $type['storage']['subject field'];
-      $col_value = $type['storage']['value field'];
-      $col_type = $type['storage']['type field'];
 
-      $base_table = $type['subject']['table'];
-      $base_field = $type['subject']['field'];
-
-      $type_id = $type['type'];
-
-      // TODO: more generic views data build, that also recognizes existing tables
-      // Define table if it is not allready declared.
-      if (!$type['storage']['views table declared']) {
-        $stats_info[$key]['views data'][$table]['table'] = array(
-          'group' => t('Stats'),
-        );
-      }
-
-      // Relation
-      $stats_info[$key]['views data alter'][$base_table]['stats_'. $type_id] = array(
-        'real field' => $base_field,
-        'title' => t('Stats: @base to @type', array('@base' => $base_table, '@type' => $type_id)),
-        'help' => $item['help'],
-        'relationship' => array(
-          'base' => $table,
-          //'field' => $col_subject,
-          'relationship field' => $base_field,
-          'base field' => $col_subject,
-          //'left field' => $base_field,
-          'handler' => 'views_handler_relationship',
-          'label' => t('Stats: @base to @type', array('@base' => $base_table, '@type' => $type_id)),
-          'extra' => array(
-            array(
-              'field' => $col_type,
-              'value' => $type_id,
-            ),
-          ),
-        ),
-      );
-
-      // Define field, if it is not allready declared.
-      if (!$type['storage']['views field declared']) {
-        $stats_info[$key]['views data'][$table][$col_value] = array(
-          'title' => t('Stats @stats_type_name value', array('@stats_type_name' => $type['name'])),
-          'help' => t('Value stats type @stats_type_name', array('@stats_type_name' => $type['name'])),
-          'field' => array(
-            'handler' => 'views_handler_field',
-            'click sortable' => TRUE,
-          ),
-          'sort' => array(
-            'handler' => 'views_handler_sort',
-          ),
-          'filter' => array(
-            'handler' => 'views_handler_filter_string',
-          ),
-          'argument' => array(
-            'handler' => 'views_handler_argument_string',
-          ),
-        );
-      }
-    }
   }
 }
 
