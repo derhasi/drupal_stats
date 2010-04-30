@@ -7,12 +7,13 @@
 
 /**
  * Implementation of hook_views_data().
+ *
+ * - Uses 'views_data' method from worker objects.
  */
 function stats_views_data() {
   $stats_types = stats_info();
   $views_data = array();
   foreach ($stats_types as $type => $info) {
-
     $worker = stats_get_worker($type);
     if (method_exists($worker, 'views_data')) {
       $add = (array) $worker->views_data();
@@ -26,7 +27,7 @@ function stats_views_data() {
 /**
  * Implementation of hook_views_data_alter().
  *
- * Adds relations from base to storage tables.
+ * - Uses 'views_data_alter' method from worker objects.
  */
 function stats_views_data_alter(&$data) {
   $stats_types = stats_info();

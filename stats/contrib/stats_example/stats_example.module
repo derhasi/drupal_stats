@@ -37,15 +37,15 @@ function stats_example_stats_info() {
     'storage value field' => 'value',
     'storage type field' => 'type',
 
-    // @TODO: Views implementation
-    //'views table declared' => FALSE, // FALSE default, TRUE for allready declared as table for views
-    //'views field declared' => FALSE, // FALSE default,
+    // Views implementation
+    // If this array is not given it will be generated from storage fields and schema
     'storage views fields' => array(
       'value' => 'numeric',
       'type' => 'string',
     ),
+    // If this array is not present, values are extracted from 'subject field' and 'subject table'
     'storage views relations' => array(
-      //'subject' => 'users',
+      //'subject' => 'users', // string value will be assumed as table, field will be generated from schema @see _stats_get_idfield().
       'subject' => array('table' => 'users', 'field' => 'uid'),
     ),
 
