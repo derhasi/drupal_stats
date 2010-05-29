@@ -112,6 +112,12 @@ class stats_default_worker {
   private $updated_values = array();
 
   /**
+   * Needed to make subjects be objects or arrays.
+   */
+  private $keys = array();
+  private $next_special_key = 0;
+
+  /**
    * Methods are listed below.
    */
 
@@ -212,24 +218,73 @@ class stats_default_worker {
    * therefore additions for the subject would be ignored.
    *
    * @param $subject
-   *   ID of the subject
+   *   a subject item
    * @param $addition
    *   (optional) the addition that initiates the calculation
    */
   public function add_subject($subject, $addition = NULL) {
+    // @TODO: subject validation by 'subject keys'
+
     if (!in_array($subject, $this->subjects)) {
       // Reload is needed for new subjects
       $this->_reload = TRUE;
     }
+
+    $key = $this->_get_subject_key($subject);
     // Add to subjects array
-    $this->subjects[$subject] = $subject;
-    // Add to new additions array
-    if (isset($addition)) {
-      $this->additions[$subject][] = $addition;
-    }
+    $this->subjects[$key] = $subject;
+
     // rebuild for the given subject
+    $this->recalculate_subjects[$key] = TRUE;
+  }
+
+  /**
+   * Add a subject to the 'to work queue' with a specific addition. This subject
+   * will be calculated when $this->calculate() is called.
+   * Additions are queued in a additions array for passing it later to the
+   * calculation function.
+   *
+   * @param $subject
+   *   a subject item
+   * @param $addition
+   *   a single addition that initiates the calculation
+   */
+  public function add_subject_with_addition($subject, $addition) {
+    if (!in_array($subject, $this->subjects)) {
+      // Reload is needed for new subjects
+      $this->_reload = TRUE;
+    }
+
+    $key = $this->_get_subject_key($subject);
+    // Add to subjects array
+    $this->subjects[$key] = $subject;
+    // Add to new additions array
+    $this->additions[$key][] = $addition;
+  }
+
+  /**
+   * Get a valid key for any subject, so subjects can also be objects or arrays.
+   * @param $subject
+   *  a subject
+   * @return
+   *  a key
+   */
+  private function _get_subject_key($subject) {
+    static $keys;
+    static $next_special_key;
+
+    if (is_object($subject) || is_array($subject) || substr($subject, 0, 1) == ':') {
+      $key = array_search($subject, $this->keys);
+      // Subject does not allready exists
+      if ($key === FALSE) {
+        $key = ':'. $this->next_special_key++;
+        $this->keys[$key] = $subject;
+      }
+      return $key;
+    }
     else {
-      $this->recalculate_subjects[$subject] = TRUE;
+      $this->keys[$subject] = $subject; //ensure that subject is set.
+      return $subject;
     }
   }
 
@@ -286,14 +341,14 @@ class stats_default_worker {
       // Reset current values
       $this->current_values = array();
       // Transform return array to simple key => value
-      foreach($current_values as $key => $item) {
-        if (is_array($item) && isset($item['subject'])) {
-          $subj = $item['subject'];
-          $val = $item['value'];
-          $this->current_values[$subj] = $val;
+      foreach($current_values as $key => $data) {
+        if (is_array($data) && isset($data['subject'])) {
+          $subject_key = $this->_get_subject_key($data['subject']);
+          $this->current_values[$subject_key] = $data['value'];
         }
         else {
-          $this->current_values[$key] = $item;
+          $subject_key = $this->_get_subject_key($key);
+          $this->current_values[$subject_key] = $data;
         }
       }
     }
@@ -315,13 +370,15 @@ class stats_default_worker {
     // Else recalculate defined subjects
     else {
       if (count($this->recalculate_subjects)) {
-        $return = call_user_func($callback, 'recalculate', $this->settings, $this->subjects, $this->additions);
+        // only subjects that should get recalculated.
+        $subjects = array_intersect_key($this->subjects, $this->recalculate_subjects);
+        $return = call_user_func($callback, 'recalculate', $this->settings, $subjects, $this->additions);
       }
       // Process Additions for subjects that are not recalculated
       if (count($this->additions)) {
         $additions = array_diff_key($this->additions, $this->recalculate_subjects);
         // less subjects to work on
-        $subjects = drupal_map_assoc(array_keys($additions));
+        $subjects = array_intersect_key($this->subjects, $additions);
 
         // Addition needs current values
         $this->load();
@@ -365,8 +422,8 @@ class stats_default_worker {
 
     $updated = array_intersect_key($this->new_values, $cur_updated);
     $new = array_diff_key($this->new_values, $cur_updated);
-    $subjects_updated = drupal_map_assoc(array_keys($updated));
-    $subjects_new = drupal_map_assoc(array_keys($new));
+    $subjects_updated = array_intersect_key($this->subjects, $updated);
+    $subjects_new = array_intersect_key($this->subjects, $new);
 
     $success = TRUE;
     // updated values
