@@ -28,9 +28,13 @@ interface stats_worker {
    */
   function write();
   /**
-   * Adds subjects to calculation/load queue.
+   * Adds a subject to calculation/load queue.
    */
-  function add_subject($subject, $addition);
+  function add_subject($subject);
+  /**
+   * Adds a subject with additions to calculation/load queue.
+   */
+  function add_subject_with_addition($subject, $addition);
   /**
    * Sets all available subjects to get calculated/loaded.
    */
